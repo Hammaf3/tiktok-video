@@ -1,0 +1,1144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Analyzer + TikTok Converter - All-in-One</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 30px auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #ff0050 0%, #ff4081 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+        }
+
+        .tab:hover {
+            background: #e9ecef;
+        }
+
+        .tab.active {
+            background: white;
+            border-bottom-color: #667eea;
+            color: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 40px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .search-box {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .btn {
+            padding: 15px 40px;
+            font-size: 18px;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            width: 100%;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-convert {
+            background: #28a745;
+            color: white;
+            padding: 10px 20px;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+
+        .btn-convert:hover {
+            background: #218838;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .results {
+            display: none;
+        }
+
+        .results-header {
+            background: #e3f2fd;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .results-header h2 {
+            color: #1976d2;
+            margin-bottom: 10px;
+        }
+
+        .video-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+        }
+
+        .video-card {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+
+        .video-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            border-color: #667eea;
+        }
+
+        .video-thumbnail {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            cursor: pointer;
+        }
+
+        .video-info {
+            padding: 15px;
+        }
+
+        .video-rank {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .video-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .video-channel {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .video-stats {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .viral-score {
+            background: #ffd700;
+            color: #333;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .progress-container {
+            display: none;
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #e0e0e0;
+            border-radius: 15px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+        }
+
+        .status-message {
+            text-align: center;
+            font-size: 16px;
+            color: #666;
+        }
+
+        .result {
+            display: none;
+            margin-top: 30px;
+            padding: 20px;
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            border-radius: 5px;
+        }
+
+        .result h3 {
+            color: #155724;
+            margin-bottom: 15px;
+        }
+
+        .download-btn {
+            display: inline-block;
+            margin-top: 15px;
+            padding: 12px 30px;
+            background: #28a745;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+
+        .download-btn:hover {
+            background: #218838;
+        }
+
+        .error {
+            display: none;
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+            border-radius: 5px;
+            color: #721c24;
+        }
+
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-radius: 5px;
+        }
+
+        .info-box h3 {
+            color: #1976d2;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎬 YouTube Analyzer + TikTok Converter</h1>
+            <p>Search viral videos & convert to TikTok format - All in one place!</p>
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('analyzer')">
+                🔍 Find Viral Videos
+            </div>
+            <div class="tab" onclick="switchTab('my-youtube')">
+                📺 My YouTube Videos
+            </div>
+            <div class="tab" onclick="switchTab('converter')">
+                🎬 Convert Video
+            </div>
+        </div>
+
+        <!-- ANALYZER TAB -->
+        <div id="analyzer" class="tab-content active">
+            <div class="search-box">
+                <form id="searchForm">
+                    <div class="form-row">
+                        <div>
+                            <label for="query">Search Query *</label>
+                            <input
+                                type="text"
+                                id="query"
+                                placeholder="e.g., cooking recipes, funny videos, tech reviews"
+                                required
+                            >
+                        </div>
+                        <div>
+                            <label for="country">Country</label>
+                            <select id="country">
+                                {% for key, country in countries.items() %}
+                                <option value="{{ key }}">{{ country.flag }} {{ country.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label for="limit">Videos</label>
+                            <input
+                                type="number"
+                                id="limit"
+                                value="25"
+                                min="10"
+                                max="50"
+                            >
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary" id="searchBtn">
+                        🔍 Search Videos
+                    </button>
+                </form>
+            </div>
+
+            <div class="loading" id="searchLoading">
+                <div class="spinner"></div>
+                <p>Searching for videos...</p>
+            </div>
+
+            <div class="results" id="searchResults">
+                <div class="results-header">
+                    <h2 id="resultsTitle"></h2>
+                    <p id="resultsInfo"></p>
+                </div>
+                <div class="video-grid" id="videoGrid"></div>
+            </div>
+
+            <div class="error" id="searchError">
+                <strong>❌ Error:</strong>
+                <p id="searchErrorMessage"></p>
+            </div>
+        </div>
+
+        <!-- MY YOUTUBE VIDEOS TAB -->
+        <div id="my-youtube" class="tab-content">
+            {% if not youtube_connected %}
+            <div class="info-box" style="background: #e3f2fd; border-left-color: #2196f3;">
+                <h3>📺 Connect Your YouTube Account</h3>
+                <p>Connect your YouTube account to access your channels and videos.</p>
+                <a href="/youtube/connect" style="display: inline-block; margin-top: 15px; padding: 12px 30px; background: #ff0000; color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">
+                    🔗 Connect YouTube Account
+                </a>
+                <p style="margin-top: 15px; color: #1976d2;">
+                    <strong>What you can do:</strong><br>
+                    • View all your YouTube channels<br>
+                    • Access all your videos and shorts<br>
+                    • Select any video to convert to TikTok format<br>
+                    • Upload directly to TikTok
+                </p>
+            </div>
+            {% else %}
+            <div class="info-box" style="background: #d4edda; border-left-color: #28a745;">
+                <h3>✅ YouTube Account Connected</h3>
+                <p>Your YouTube account is connected. Select a channel to view videos.</p>
+            </div>
+
+            <div class="loading" id="channelsLoading" style="display: none;">
+                <div class="spinner"></div>
+                <p>Loading your channels...</p>
+            </div>
+
+            <div id="channelsSection" style="display: none;">
+                <div class="search-box">
+                    <h3 style="margin-bottom: 20px; color: #333;">📺 Your YouTube Channels</h3>
+                    <div id="channelsList"></div>
+                </div>
+            </div>
+
+            <div class="loading" id="videosLoading" style="display: none;">
+                <div class="spinner"></div>
+                <p>Loading videos...</p>
+            </div>
+
+            <div id="videosSection" style="display: none;">
+                <div class="results" style="display: block;">
+                    <div class="results-header">
+                        <h2 id="channelVideosTitle"></h2>
+                        <p id="channelVideosInfo"></p>
+                    </div>
+                    <div class="video-grid" id="myVideosGrid"></div>
+                </div>
+            </div>
+
+            <div class="error" id="youtubeError" style="display: none;">
+                <strong>❌ Error:</strong>
+                <p id="youtubeErrorMessage"></p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- CONVERTER TAB -->
+        <div id="converter" class="tab-content">
+            {% if not tiktok_connected %}
+            <div class="info-box" style="background: #fff3cd; border-left-color: #ffc107;">
+                <h3>⚠️ TikTok Not Connected</h3>
+                <p>Connect your TikTok account to enable auto-upload feature.</p>
+                <a href="/tiktok/connect" style="display: inline-block; margin-top: 10px; padding: 12px 30px; background: #000; color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">
+                    Connect TikTok Account
+                </a>
+                <p style="margin-top: 10px; color: #856404;">
+                    <small>You can still convert videos without connecting. Manual upload required.</small>
+                </p>
+            </div>
+            {% else %}
+            <div class="info-box" style="background: #d4edda; border-left-color: #28a745;">
+                <h3>✅ TikTok Connected</h3>
+                <p>Your TikTok account is connected. Auto-upload is available!</p>
+            </div>
+            {% endif %}
+
+            <div class="info-box">
+                <h3>📥 How It Works</h3>
+                <p><strong>Step 1:</strong> Paste YouTube URL below (or use "Convert" button from search results)</p>
+                <p><strong>Step 2:</strong> Choose options (auto-upload if TikTok connected)</p>
+                <p><strong>Step 3:</strong> Click "Convert Video"</p>
+                <p><strong>Step 4:</strong> Download video OR it auto-uploads to TikTok</p>
+            </div>
+
+            <div class="search-box">
+                <form id="convertForm">
+                    <div>
+                        <label for="youtube_url">YouTube Video URL *</label>
+                        <input
+                            type="text"
+                            id="youtube_url"
+                            placeholder="https://youtube.com/watch?v=..."
+                            required
+                        >
+                    </div>
+
+                    <div class="form-row" style="margin-top: 20px;">
+                        <div>
+                            <label for="start_time">Start Time (optional)</label>
+                            <input
+                                type="text"
+                                id="start_time"
+                                placeholder="00:01:30 or leave empty"
+                            >
+                        </div>
+                        <div>
+                            <label for="duration">Duration (seconds)</label>
+                            <input
+                                type="number"
+                                id="duration"
+                                value="30"
+                                min="10"
+                                max="60"
+                            >
+                        </div>
+                        <div>
+                            <div class="checkbox-group" style="margin-top: 35px;">
+                                <input
+                                    type="checkbox"
+                                    id="auto_detect"
+                                >
+                                <label for="auto_detect" style="margin: 0;">Auto-detect best segment (slower)</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 20px;">
+                        <label for="caption">Caption (optional)</label>
+                        <textarea
+                            id="caption"
+                            rows="3"
+                            placeholder="Leave empty for auto-generated caption"
+                        ></textarea>
+                    </div>
+
+                    {% if tiktok_connected %}
+                    <div style="margin-top: 20px;">
+                        <div class="checkbox-group">
+                            <input
+                                type="checkbox"
+                                id="auto_upload"
+                                checked
+                            >
+                            <label for="auto_upload" style="margin: 0;">
+                                🚀 Auto-upload to TikTok (recommended)
+                            </label>
+                        </div>
+                        <p style="margin-top: 5px; color: #666; font-size: 14px;">
+                            Video will be automatically uploaded to your TikTok account
+                        </p>
+                    </div>
+                    {% endif %}
+
+                    <button type="submit" class="btn btn-primary" id="convertBtn" style="margin-top: 20px;">
+                        🎬 Convert Video
+                    </button>
+                </form>
+            </div>
+
+            <div class="progress-container" id="progressContainer">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill">0%</div>
+                </div>
+                <div class="status-message" id="statusMessage">Processing...</div>
+            </div>
+
+            <div class="result" id="result">
+                <h3 id="resultTitle">✅ Conversion Complete!</h3>
+                <p><strong>Video Title:</strong> <span id="videoTitle"></span></p>
+                <p><strong>Duration:</strong> <span id="videoDuration"></span>s</p>
+
+                <!-- Video Player -->
+                <div style="margin: 20px 0; background: #000; border-radius: 10px; overflow: hidden;">
+                    <video id="videoPlayer" controls style="width: 100%; max-width: 400px; display: block; margin: 0 auto;">
+                        <source id="videoSource" src="" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                </div>
+
+                <!-- Caption Section -->
+                <div style="margin: 20px 0;">
+                    <p><strong>📝 Caption for this video:</strong></p>
+                    <textarea id="videoCaption" rows="4" style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px; resize: vertical;"></textarea>
+                    <p style="margin-top: 5px; color: #666; font-size: 14px;">
+                        You can edit the caption before uploading
+                    </p>
+                </div>
+
+                <!-- TikTok Upload Section -->
+                {% if tiktok_connected %}
+                <div style="margin: 20px 0;">
+                    <button onclick="uploadToTikTok()" class="btn btn-primary" id="uploadTikTokBtn" style="background: #000;">
+                        🚀 Upload to TikTok
+                    </button>
+                    <p style="margin-top: 10px; color: #666; font-size: 14px;">
+                        Video will be uploaded to your connected TikTok account
+                    </p>
+                </div>
+                {% else %}
+                <div style="margin: 20px 0; padding: 15px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 5px;">
+                    <p><strong>⚠️ TikTok Account Not Connected</strong></p>
+                    <p style="margin: 10px 0; color: #856404;">Please connect your TikTok account to enable upload</p>
+                    <a href="/tiktok/connect" style="display: inline-block; padding: 12px 30px; background: #000; color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">
+                        Connect TikTok Account
+                    </a>
+                </div>
+                {% endif %}
+
+                <!-- Download Option -->
+                <div style="margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 5px;">
+                    <p><strong>Or download video:</strong></p>
+                    <a href="#" id="downloadLink" class="download-btn" download style="margin-top: 10px;">📥 Download Video</a>
+                </div>
+
+                <!-- Upload Success Message (Hidden by default) -->
+                <div id="uploadSuccess" style="display: none; margin-top: 20px; padding: 20px; background: #d4edda; border-left: 4px solid #28a745; border-radius: 5px;">
+                    <h4 style="color: #155724; margin-bottom: 10px;">🎉 Uploaded to TikTok Successfully!</h4>
+                    <p><strong>TikTok URL:</strong> <a href="#" id="uploadedTikTokUrl" target="_blank" style="color: #007bff; font-weight: 600;"></a></p>
+                </div>
+            </div>
+
+            <div class="error" id="convertError">
+                <strong>❌ Error:</strong>
+                <p id="convertErrorMessage"></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Tab switching
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+            event.target.classList.add('active');
+            document.getElementById(tabName).classList.add('active');
+
+            // Load YouTube channels when My YouTube tab is clicked
+            {% if youtube_connected %}
+            if (tabName === 'my-youtube') {
+                // Only load if not already loaded
+                if (document.getElementById('channelsList').innerHTML === '') {
+                    loadYouTubeChannels();
+                }
+            }
+            {% endif %}
+        }
+
+        // ANALYZER FUNCTIONALITY
+        const searchForm = document.getElementById('searchForm');
+        const searchBtn = document.getElementById('searchBtn');
+        const searchLoading = document.getElementById('searchLoading');
+        const searchResults = document.getElementById('searchResults');
+        const searchError = document.getElementById('searchError');
+        const videoGrid = document.getElementById('videoGrid');
+
+        searchForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            searchLoading.style.display = 'block';
+            searchResults.style.display = 'none';
+            searchError.style.display = 'none';
+            searchBtn.disabled = true;
+
+            const formData = {
+                query: document.getElementById('query').value,
+                country: document.getElementById('country').value,
+                limit: document.getElementById('limit').value
+            };
+
+            try {
+                const response = await fetch('/search_youtube', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(formData)
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Search failed');
+                }
+
+                displaySearchResults(data);
+
+            } catch (err) {
+                showSearchError(err.message);
+            } finally {
+                searchLoading.style.display = 'none';
+                searchBtn.disabled = false;
+            }
+        });
+
+        function displaySearchResults(data) {
+            document.getElementById('resultsTitle').textContent = `Top ${data.total} Videos: "${data.query}"`;
+            document.getElementById('resultsInfo').textContent = `Country: ${data.country} | Ranked by Viral Score`;
+
+            videoGrid.innerHTML = '';
+
+            data.videos.forEach(video => {
+                const card = document.createElement('div');
+                card.className = 'video-card';
+
+                card.innerHTML = `
+                    <img src="${video.thumbnail}" alt="${video.title}" class="video-thumbnail" onclick="window.open('${video.url}', '_blank')">
+                    <div class="video-info">
+                        <span class="video-rank">#${video.rank}</span>
+                        <div class="video-title" onclick="window.open('${video.url}', '_blank')">${video.title}</div>
+                        <div class="video-channel">📺 ${video.channel}</div>
+                        <div class="video-stats">
+                            <span>👁️ ${video.views}</span>
+                            <span>👍 ${video.likes}</span>
+                            <span>💬 ${video.comments}</span>
+                        </div>
+                        <div class="video-stats">
+                            <span>⏱️ ${video.duration}</span>
+                            <span>📅 ${video.days_old} days ago</span>
+                        </div>
+                        <div class="viral-score">🔥 Viral Score: ${video.viral_score}/100</div>
+                        <button class="btn btn-convert" onclick="convertVideo('${video.url}')">
+                            🎬 Convert to TikTok
+                        </button>
+                    </div>
+                `;
+
+                videoGrid.appendChild(card);
+            });
+
+            searchResults.style.display = 'block';
+        }
+
+        function showSearchError(message) {
+            searchError.style.display = 'block';
+            document.getElementById('searchErrorMessage').textContent = message;
+        }
+
+        function convertVideo(url) {
+            // Switch to converter tab
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.tab')[1].classList.add('active');
+            document.getElementById('converter').classList.add('active');
+
+            // Fill URL
+            document.getElementById('youtube_url').value = url;
+
+            // Scroll to top
+            window.scrollTo(0, 0);
+        }
+
+        // CONVERTER FUNCTIONALITY
+        const convertForm = document.getElementById('convertForm');
+        const convertBtn = document.getElementById('convertBtn');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressFill = document.getElementById('progressFill');
+        const statusMessage = document.getElementById('statusMessage');
+        const result = document.getElementById('result');
+        const convertError = document.getElementById('convertError');
+
+        convertForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            progressContainer.style.display = 'block';
+            result.style.display = 'none';
+            convertError.style.display = 'none';
+            convertBtn.disabled = true;
+
+            const autoUploadCheckbox = document.getElementById('auto_upload');
+            const formData = {
+                youtube_url: document.getElementById('youtube_url').value,
+                start_time: document.getElementById('start_time').value,
+                duration: document.getElementById('duration').value,
+                caption: document.getElementById('caption').value,
+                auto_detect: document.getElementById('auto_detect').checked,
+                auto_upload: autoUploadCheckbox ? autoUploadCheckbox.checked : false
+            };
+
+            try {
+                const response = await fetch('/convert', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(formData)
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Conversion failed');
+                }
+
+                pollStatus(data.job_id);
+
+            } catch (err) {
+                showConvertError(err.message);
+                convertBtn.disabled = false;
+            }
+        });
+
+        async function pollStatus(jobId) {
+            try {
+                const response = await fetch(`/status/${jobId}`);
+                const data = await response.json();
+
+                progressFill.style.width = data.progress + '%';
+                progressFill.textContent = data.progress + '%';
+                statusMessage.textContent = data.message;
+
+                if (data.status === 'completed') {
+                    // Redirect to video result page
+                    if (data.redirect_url) {
+                        window.location.href = data.redirect_url;
+                    } else {
+                        window.location.href = '/video_result/' + data.filename;
+                    }
+
+                } else if (data.status === 'error') {
+                    throw new Error(data.message);
+
+                } else {
+                    setTimeout(() => pollStatus(jobId), 2000);
+                }
+
+            } catch (err) {
+                showConvertError(err.message);
+                convertBtn.disabled = false;
+            }
+        }
+
+        function showConvertError(message) {
+            progressContainer.style.display = 'none';
+            convertError.style.display = 'block';
+            document.getElementById('convertErrorMessage').textContent = message;
+        }
+
+        // Upload to TikTok function
+        async function uploadToTikTok() {
+            const uploadBtn = document.getElementById('uploadTikTokBtn');
+            const uploadSuccess = document.getElementById('uploadSuccess');
+
+            if (!window.currentVideoFilename) {
+                alert('No video to upload');
+                return;
+            }
+
+            uploadBtn.disabled = true;
+            uploadBtn.textContent = '⏳ Uploading to TikTok...';
+
+            try {
+                const caption = document.getElementById('videoCaption').value;
+                const youtubeUrl = document.getElementById('youtube_url').value;
+
+                const response = await fetch('/upload_to_tiktok', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        filename: window.currentVideoFilename,
+                        caption: caption,
+                        youtube_url: youtubeUrl
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Upload failed');
+                }
+
+                // Show success
+                uploadSuccess.style.display = 'block';
+                document.getElementById('uploadedTikTokUrl').href = data.tiktok_url;
+                document.getElementById('uploadedTikTokUrl').textContent = data.tiktok_url;
+
+                uploadBtn.textContent = '✅ Uploaded Successfully!';
+                uploadBtn.style.background = '#28a745';
+
+            } catch (err) {
+                alert('Upload failed: ' + err.message);
+                uploadBtn.disabled = false;
+                uploadBtn.textContent = '🚀 Upload to TikTok';
+            }
+        }
+
+        // ==================== MY YOUTUBE VIDEOS FUNCTIONALITY ====================
+
+        {% if youtube_connected %}
+        // Load channels when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            // Don't auto-load, wait for user to click the tab
+        });
+
+        // Load channels when My YouTube tab is clicked
+        function loadYouTubeChannels() {
+            const channelsLoading = document.getElementById('channelsLoading');
+            const channelsSection = document.getElementById('channelsSection');
+            const youtubeError = document.getElementById('youtubeError');
+
+            channelsLoading.style.display = 'block';
+            channelsSection.style.display = 'none';
+            youtubeError.style.display = 'none';
+
+            console.log('Fetching YouTube channels...');
+
+            fetch('/youtube/channels')
+                .then(response => {
+                    console.log('Channels response status:', response.status);
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Channels data:', data);
+
+                    if (!data.success) {
+                        throw new Error(data.error || 'Failed to load channels');
+                    }
+
+                    displayChannels(data.channels);
+                    channelsLoading.style.display = 'none';
+                    channelsSection.style.display = 'block';
+                })
+                .catch(err => {
+                    console.error('Error loading channels:', err);
+                    channelsLoading.style.display = 'none';
+                    youtubeError.style.display = 'block';
+                    document.getElementById('youtubeErrorMessage').textContent = err.message;
+                });
+        }
+
+        function displayChannels(channels) {
+            const channelsList = document.getElementById('channelsList');
+            channelsList.innerHTML = '';
+
+            if (channels.length === 0) {
+                channelsList.innerHTML = '<p style="color: #666;">No channels found.</p>';
+                return;
+            }
+
+            channels.forEach(channel => {
+                const channelCard = document.createElement('div');
+                channelCard.style.cssText = 'border: 2px solid #e0e0e0; border-radius: 10px; padding: 20px; margin-bottom: 15px; cursor: pointer; transition: all 0.3s;';
+                channelCard.onmouseover = function() { this.style.borderColor = '#667eea'; this.style.transform = 'translateY(-2px)'; };
+                channelCard.onmouseout = function() { this.style.borderColor = '#e0e0e0'; this.style.transform = 'translateY(0)'; };
+                channelCard.onclick = function() { loadChannelVideos(channel.id, channel.title); };
+
+                channelCard.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 20px;">
+                        <img src="${channel.thumbnail}" alt="${channel.title}" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover;">
+                        <div style="flex: 1;">
+                            <h3 style="margin: 0 0 10px 0; color: #333;">${channel.title}</h3>
+                            <p style="margin: 0; color: #666; font-size: 14px;">${channel.description.substring(0, 100)}${channel.description.length > 100 ? '...' : ''}</p>
+                            <div style="margin-top: 10px; display: flex; gap: 20px; font-size: 14px; color: #666;">
+                                <span>👥 ${formatNumber(channel.subscriber_count)} subscribers</span>
+                                <span>🎬 ${formatNumber(channel.video_count)} videos</span>
+                            </div>
+                        </div>
+                        <div style="padding: 10px 20px; background: #667eea; color: white; border-radius: 8px; font-weight: 600;">
+                            View Videos →
+                        </div>
+                    </div>
+                `;
+
+                channelsList.appendChild(channelCard);
+            });
+        }
+
+        function loadChannelVideos(channelId, channelTitle) {
+            const videosLoading = document.getElementById('videosLoading');
+            const videosSection = document.getElementById('videosSection');
+            const youtubeError = document.getElementById('youtubeError');
+
+            videosLoading.style.display = 'block';
+            videosSection.style.display = 'none';
+            youtubeError.style.display = 'none';
+
+            console.log('Fetching videos for channel:', channelId, channelTitle);
+
+            fetch(`/youtube/videos/${channelId}`)
+                .then(response => {
+                    console.log('Videos response status:', response.status);
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Videos data:', data);
+                    console.log('Total videos received:', data.videos ? data.videos.length : 0);
+
+                    if (!data.success) {
+                        throw new Error(data.error || 'Failed to load videos');
+                    }
+
+                    displayMyVideos(data.videos, channelTitle);
+                    videosLoading.style.display = 'none';
+                    videosSection.style.display = 'block';
+
+                    // Scroll to videos section
+                    videosSection.scrollIntoView({ behavior: 'smooth' });
+                })
+                .catch(err => {
+                    console.error('Error loading videos:', err);
+                    videosLoading.style.display = 'none';
+                    youtubeError.style.display = 'block';
+                    document.getElementById('youtubeErrorMessage').textContent = err.message;
+                });
+        }
+
+        function displayMyVideos(videos, channelTitle) {
+            console.log('displayMyVideos called with', videos.length, 'videos');
+
+            document.getElementById('channelVideosTitle').textContent = `Videos from: ${channelTitle}`;
+            document.getElementById('channelVideosInfo').textContent = `Total: ${videos.length} videos | Click any video to convert to TikTok`;
+
+            const myVideosGrid = document.getElementById('myVideosGrid');
+            console.log('myVideosGrid element:', myVideosGrid);
+
+            myVideosGrid.innerHTML = '';
+
+            if (videos.length === 0) {
+                myVideosGrid.innerHTML = '<p style="color: #666; text-align: center; padding: 40px;">No videos found in this channel.</p>';
+                return;
+            }
+
+            console.log('Creating video cards...');
+
+            videos.forEach((video, index) => {
+                const card = document.createElement('div');
+                card.className = 'video-card';
+
+                const videoType = video.is_short ? '🎬 Short' : '🎥 Video';
+                const viewsFormatted = formatNumber(video.view_count);
+                const likesFormatted = formatNumber(video.like_count);
+                const commentsFormatted = formatNumber(video.comment_count);
+
+                card.innerHTML = `
+                    <img src="${video.thumbnail}" alt="${video.title}" class="video-thumbnail" onclick="window.open('${video.url}', '_blank')">
+                    <div class="video-info">
+                        <span class="video-rank">#${index + 1}</span>
+                        ${video.is_short ? '<span style="background: #ff0050; color: white; padding: 3px 8px; border-radius: 5px; font-size: 12px; margin-left: 5px;">SHORT</span>' : ''}
+                        <div class="video-title" onclick="window.open('${video.url}', '_blank')">${video.title}</div>
+                        <div class="video-stats">
+                            <span>👁️ ${viewsFormatted}</span>
+                            <span>👍 ${likesFormatted}</span>
+                            <span>💬 ${commentsFormatted}</span>
+                        </div>
+                        <div class="video-stats">
+                            <span>⏱️ ${video.duration}</span>
+                            <span>${videoType}</span>
+                        </div>
+                        <button class="btn btn-convert" onclick="convertMyVideo('${video.url}', '${video.title.replace(/'/g, "\\'")}')">
+                            🎬 Convert to TikTok
+                        </button>
+                    </div>
+                `;
+
+                myVideosGrid.appendChild(card);
+            });
+
+            console.log('Video cards created:', myVideosGrid.children.length);
+            console.log('myVideosGrid HTML length:', myVideosGrid.innerHTML.length);
+        }
+
+        function convertMyVideo(url, title) {
+            // Switch to converter tab
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.tab')[2].classList.add('active'); // Converter is 3rd tab (index 2)
+            document.getElementById('converter').classList.add('active');
+
+            // Fill URL
+            document.getElementById('youtube_url').value = url;
+
+            // Scroll to top
+            window.scrollTo(0, 0);
+
+            // Show notification
+            alert(`Video selected: ${title}\n\nNow configure conversion settings and click "Convert Video"`);
+        }
+
+        function formatNumber(num) {
+            if (num >= 1000000) {
+                return (num / 1000000).toFixed(1) + 'M';
+            } else if (num >= 1000) {
+                return (num / 1000).toFixed(1) + 'K';
+            }
+            return num.toString();
+        }
+        {% endif %}
+    </script>
+</body>
+</html>

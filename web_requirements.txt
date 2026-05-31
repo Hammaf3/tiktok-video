@@ -1,0 +1,6 @@
+# Web Application Requirements
+# Add to existing requirements.txt
+
+Flask==3.0.0
+Flask-CORS==4.0.0
+gunicorn==21.2.0

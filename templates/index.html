@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube to TikTok Converter</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 50px auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #ff0050 0%, #ff4081 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .tiktok-status {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-radius: 5px;
+        }
+
+        .tiktok-status.connected {
+            background: #d4edda;
+            border-left-color: #28a745;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .btn {
+            padding: 15px 40px;
+            font-size: 18px;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-block;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-tiktok {
+            background: #000;
+            color: white;
+        }
+
+        .btn-tiktok:hover {
+            background: #333;
+        }
+
+        .progress-container {
+            display: none;
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #e0e0e0;
+            border-radius: 15px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+        }
+
+        .status-message {
+            text-align: center;
+            font-size: 16px;
+            color: #666;
+        }
+
+        .result {
+            display: none;
+            margin-top: 30px;
+            padding: 20px;
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            border-radius: 5px;
+        }
+
+        .result h3 {
+            color: #155724;
+            margin-bottom: 10px;
+        }
+
+        .result a {
+            color: #007bff;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .result a:hover {
+            text-decoration: underline;
+        }
+
+        .error {
+            display: none;
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+            border-radius: 5px;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎬 YouTube to TikTok</h1>
+            <p>Convert YouTube videos to TikTok format in seconds</p>
+        </div>
+
+        <div class="content">
+            {% if not tiktok_connected %}
+            <div class="tiktok-status">
+                <strong>⚠️ TikTok Not Connected</strong>
+                <p style="margin: 10px 0;">Connect your TikTok account first to enable uploads.</p>
+                <a href="/tiktok/connect" class="btn btn-tiktok">Connect TikTok Account</a>
+            </div>
+            {% else %}
+            <div class="tiktok-status connected">
+                <strong>✅ TikTok Connected</strong>
+                <p style="margin: 10px 0;">Your TikTok account is connected and ready!</p>
+            </div>
+            {% endif %}
+
+            <form id="convertForm">
+                <div class="form-group">
+                    <label for="youtube_url">YouTube Video URL *</label>
+                    <input
+                        type="text"
+                        id="youtube_url"
+                        name="youtube_url"
+                        placeholder="https://youtube.com/watch?v=..."
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="start_time">Start Time (optional)</label>
+                    <input
+                        type="text"
+                        id="start_time"
+                        name="start_time"
+                        placeholder="00:01:30 or leave empty for auto-detect"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="duration">Duration (seconds)</label>
+                    <input
+                        type="number"
+                        id="duration"
+                        name="duration"
+                        value="30"
+                        min="10"
+                        max="60"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input
+                            type="checkbox"
+                            id="auto_detect"
+                            name="auto_detect"
+                            checked
+                        >
+                        <label for="auto_detect" style="margin: 0;">Auto-detect best segment (AI-powered)</label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="caption">Caption (optional)</label>
+                    <textarea
+                        id="caption"
+                        name="caption"
+                        rows="3"
+                        placeholder="Leave empty for auto-generated caption"
+                    ></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-primary" id="submitBtn">
+                    Convert & Upload to TikTok
+                </button>
+            </form>
+
+            <div class="progress-container" id="progressContainer">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill">0%</div>
+                </div>
+                <div class="status-message" id="statusMessage">Processing...</div>
+            </div>
+
+            <div class="result" id="result">
+                <h3>✅ Upload Complete!</h3>
+                <p><strong>Video Title:</strong> <span id="videoTitle"></span></p>
+                <p><strong>TikTok URL:</strong> <a href="#" id="tiktokUrl" target="_blank">View on TikTok</a></p>
+            </div>
+
+            <div class="error" id="error">
+                <strong>❌ Error:</strong>
+                <p id="errorMessage"></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('convertForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressFill = document.getElementById('progressFill');
+        const statusMessage = document.getElementById('statusMessage');
+        const result = document.getElementById('result');
+        const error = document.getElementById('error');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            // Reset UI
+            progressContainer.style.display = 'block';
+            result.style.display = 'none';
+            error.style.display = 'none';
+            submitBtn.disabled = true;
+
+            // Get form data
+            const formData = {
+                youtube_url: document.getElementById('youtube_url').value,
+                start_time: document.getElementById('start_time').value,
+                duration: document.getElementById('duration').value,
+                caption: document.getElementById('caption').value,
+                auto_detect: document.getElementById('auto_detect').checked
+            };
+
+            try {
+                // Start conversion
+                const response = await fetch('/convert', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Conversion failed');
+                }
+
+                // Poll for status
+                const jobId = data.job_id;
+                pollStatus(jobId);
+
+            } catch (err) {
+                showError(err.message);
+                submitBtn.disabled = false;
+            }
+        });
+
+        async function pollStatus(jobId) {
+            try {
+                const response = await fetch(`/status/${jobId}`);
+                const data = await response.json();
+
+                // Update progress
+                progressFill.style.width = data.progress + '%';
+                progressFill.textContent = data.progress + '%';
+                statusMessage.textContent = data.message;
+
+                if (data.status === 'completed') {
+                    // Show success
+                    progressContainer.style.display = 'none';
+                    result.style.display = 'block';
+                    document.getElementById('videoTitle').textContent = data.video_title;
+                    document.getElementById('tiktokUrl').href = data.tiktok_url;
+                    document.getElementById('tiktokUrl').textContent = data.tiktok_url;
+                    submitBtn.disabled = false;
+
+                } else if (data.status === 'error') {
+                    throw new Error(data.message);
+
+                } else {
+                    // Continue polling
+                    setTimeout(() => pollStatus(jobId), 2000);
+                }
+
+            } catch (err) {
+                showError(err.message);
+                submitBtn.disabled = false;
+            }
+        }
+
+        function showError(message) {
+            progressContainer.style.display = 'none';
+            error.style.display = 'block';
+            document.getElementById('errorMessage').textContent = message;
+        }
+    </script>
+</body>
+</html>

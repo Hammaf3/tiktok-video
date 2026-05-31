@@ -1,0 +1,29 @@
+# yt2tik - YouTube to TikTok Converter
+# System 1 Requirements
+
+# YouTube downloading
+yt-dlp==2024.8.6
+
+# Video processing
+ffmpeg-python==0.2.0
+
+# HTTP requests
+requests==2.31.0
+
+# Environment variables
+python-dotenv==1.0.1
+
+# CLI and UI
+rich==13.7.1
+tqdm==4.66.4
+
+# YouTube Data API (for System 2)
+google-api-python-client==2.134.0
+google-auth-httplib2==0.2.0
+google-auth-oauthlib==1.2.0
+
+# Data processing (for System 2)
+pandas==2.2.2
+
+# Utilities
+python-dateutil==2.9.0

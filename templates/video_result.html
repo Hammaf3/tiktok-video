@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Ready - Upload to TikTok</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 30px auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #ff0050 0%, #ff4081 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2em;
+            margin-bottom: 5px;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .video-section {
+            margin-bottom: 30px;
+        }
+
+        .video-player {
+            width: 100%;
+            max-width: 100%;
+            background: #000;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .video-player video {
+            width: 100%;
+            height: auto;
+            display: block;
+            max-height: 600px;
+        }
+
+        .video-info {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .video-info p {
+            margin: 5px 0;
+            color: #333;
+        }
+
+        .caption-section {
+            margin: 30px 0;
+        }
+
+        .caption-section h3 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+
+        .caption-section textarea {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            resize: vertical;
+            min-height: 120px;
+            font-family: inherit;
+        }
+
+        .caption-section textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .caption-hint {
+            margin-top: 8px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .upload-section {
+            margin: 30px 0;
+        }
+
+        .btn-upload {
+            width: 100%;
+            padding: 20px;
+            font-size: 20px;
+            font-weight: 600;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: #000;
+            color: white;
+        }
+
+        .btn-upload:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+
+        .btn-upload:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .tiktok-warning {
+            padding: 20px;
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .tiktok-warning h3 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+
+        .tiktok-warning p {
+            color: #856404;
+            margin: 10px 0;
+        }
+
+        .btn-connect {
+            display: inline-block;
+            padding: 12px 30px;
+            background: #000;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+
+        .btn-connect:hover {
+            background: #333;
+        }
+
+        .success-message {
+            display: none;
+            padding: 20px;
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .success-message h3 {
+            color: #155724;
+            margin-bottom: 10px;
+        }
+
+        .success-message a {
+            color: #007bff;
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        .success-message a:hover {
+            text-decoration: underline;
+        }
+
+        .back-link {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .back-link a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .back-link a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>✅ Video Converted Successfully!</h1>
+            <p>Your video is ready for TikTok</p>
+        </div>
+
+        <div class="content">
+            <!-- Video Player -->
+            <div class="video-section">
+                <div class="video-player">
+                    <video controls autoplay loop>
+                        <source src="/download/{{ filename }}" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                </div>
+
+                <div class="video-info">
+                    <p><strong>📹 Title:</strong> {{ video_title }}</p>
+                    <p><strong>⏱️ Duration:</strong> {{ duration }}s</p>
+                    <p><strong>📁 Format:</strong> TikTok Ready (9:16)</p>
+                </div>
+            </div>
+
+            <!-- Caption Section -->
+            <div class="caption-section">
+                <h3>📝 Write Caption for TikTok</h3>
+                <textarea id="captionInput" placeholder="Write your caption here... Add hashtags like #fyp #viral #trending"></textarea>
+                <p class="caption-hint">💡 Tip: Add engaging text and popular hashtags to get more views on TikTok</p>
+            </div>
+
+            <!-- Upload Section -->
+            <div class="upload-section">
+                {% if tiktok_connected %}
+                    <button onclick="uploadToTikTok()" class="btn-upload" id="uploadBtn">
+                        🚀 Upload to TikTok
+                    </button>
+                {% else %}
+                    <div class="tiktok-warning">
+                        <h3>⚠️ TikTok Account Not Connected</h3>
+                        <p>You need to connect your TikTok account to upload videos.</p>
+                        <a href="/tiktok/connect" class="btn-connect">Connect TikTok Account</a>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Success Message -->
+            <div class="success-message" id="successMessage">
+                <h3>🎉 Video Uploaded Successfully!</h3>
+                <p><strong>TikTok URL:</strong> <a href="#" id="tiktokLink" target="_blank"></a></p>
+                <p>Your video is now live on TikTok!</p>
+            </div>
+
+            <!-- Back Link -->
+            <div class="back-link">
+                <a href="/">← Convert Another Video</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function uploadToTikTok() {
+            const caption = document.getElementById('captionInput').value.trim();
+            const uploadBtn = document.getElementById('uploadBtn');
+
+            if (!caption) {
+                alert('Please write a caption for your video');
+                return;
+            }
+
+            uploadBtn.disabled = true;
+            uploadBtn.textContent = '⏳ Uploading to TikTok...';
+
+            try {
+                const response = await fetch('/upload_to_tiktok', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        filename: '{{ filename }}',
+                        caption: caption
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Upload failed');
+                }
+
+                // Show success message
+                document.getElementById('successMessage').style.display = 'block';
+                document.getElementById('tiktokLink').href = data.tiktok_url;
+                document.getElementById('tiktokLink').textContent = data.tiktok_url;
+
+                uploadBtn.textContent = '✅ Uploaded Successfully!';
+                uploadBtn.style.background = '#28a745';
+
+                // Scroll to success message
+                document.getElementById('successMessage').scrollIntoView({ behavior: 'smooth' });
+
+            } catch (err) {
+                alert('Upload failed: ' + err.message);
+                uploadBtn.disabled = false;
+                uploadBtn.textContent = '🚀 Upload to TikTok';
+            }
+        }
+    </script>
+</body>
+</html>

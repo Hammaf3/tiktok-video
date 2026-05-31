@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>YouTube API Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .btn {
+            padding: 15px 30px;
+            font-size: 16px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        .btn:hover {
+            background: #45a049;
+        }
+        .output {
+            background: #f4f4f4;
+            padding: 20px;
+            border-radius: 5px;
+            margin-top: 20px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        .success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        .video-card {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .video-card img {
+            max-width: 200px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 YouTube API Debug Test</h1>
+    <p>Is page se hum test karenge ke API properly kaam kar raha hai ya nahi.</p>
+
+    <div>
+        <button class="btn" onclick="testChannels()">Step 1: Test Channels</button>
+        <button class="btn" onclick="testVideos()" id="testVideosBtn" disabled>Step 2: Test Videos</button>
+    </div>
+
+    <div id="output"></div>
+
+    <script>
+        let currentChannelId = null;
+
+        function log(message, type = 'info') {
+            const output = document.getElementById('output');
+            const div = document.createElement('div');
+            div.className = type === 'error' ? 'error' : type === 'success' ? 'success' : 'output';
+            div.textContent = message;
+            output.appendChild(div);
+        }
+
+        function logJSON(label, data) {
+            const output = document.getElementById('output');
+            const div = document.createElement('div');
+            div.className = 'output';
+            div.innerHTML = '<strong>' + label + ':</strong><br>' + JSON.stringify(data, null, 2);
+            output.appendChild(div);
+        }
+
+        async function testChannels() {
+            document.getElementById('output').innerHTML = '';
+            log('🔄 Fetching channels...', 'info');
+
+            try {
+                const response = await fetch('/youtube/channels');
+                log('✅ Response received. Status: ' + response.status, 'success');
+
+                const data = await response.json();
+                logJSON('Response Data', data);
+
+                if (data.success && data.channels && data.channels.length > 0) {
+                    log('✅ SUCCESS: ' + data.channels.length + ' channels found!', 'success');
+
+                    // Display channels
+                    data.channels.forEach(channel => {
+                        const div = document.createElement('div');
+                        div.className = 'video-card';
+                        div.innerHTML = `
+                            <img src="${channel.thumbnail}" alt="${channel.title}">
+                            <h3>${channel.title}</h3>
+                            <p>👥 ${channel.subscriber_count} subscribers | 🎬 ${channel.video_count} videos</p>
+                            <p><strong>Channel ID:</strong> ${channel.id}</p>
+                        `;
+                        document.getElementById('output').appendChild(div);
+                    });
+
+                    // Enable videos test button
+                    currentChannelId = data.channels[0].id;
+                    document.getElementById('testVideosBtn').disabled = false;
+                    log('✅ Now click "Step 2: Test Videos" to fetch videos', 'success');
+
+                } else {
+                    log('❌ ERROR: No channels found or API returned error', 'error');
+                    logJSON('Full Response', data);
+                }
+
+            } catch (error) {
+                log('❌ ERROR: ' + error.message, 'error');
+                console.error('Full error:', error);
+            }
+        }
+
+        async function testVideos() {
+            if (!currentChannelId) {
+                log('❌ ERROR: No channel ID available. Run Step 1 first.', 'error');
+                return;
+            }
+
+            log('🔄 Fetching videos for channel: ' + currentChannelId, 'info');
+
+            try {
+                const response = await fetch('/youtube/videos/' + currentChannelId);
+                log('✅ Response received. Status: ' + response.status, 'success');
+
+                const data = await response.json();
+                logJSON('Response Data', data);
+
+                if (data.success && data.videos && data.videos.length > 0) {
+                    log('✅ SUCCESS: ' + data.videos.length + ' videos found!', 'success');
+
+                    // Display videos
+                    data.videos.forEach((video, index) => {
+                        const div = document.createElement('div');
+                        div.className = 'video-card';
+                        div.innerHTML = `
+                            <img src="${video.thumbnail}" alt="${video.title}">
+                            <h4>#${index + 1} - ${video.title}</h4>
+                            <p>👁️ ${video.view_count} views | 👍 ${video.like_count} likes | ⏱️ ${video.duration}</p>
+                            <p><a href="${video.url}" target="_blank">Watch on YouTube</a></p>
+                        `;
+                        document.getElementById('output').appendChild(div);
+                    });
+
+                } else if (data.videos && data.videos.length === 0) {
+                    log('⚠️ WARNING: API returned 0 videos', 'error');
+                    logJSON('Full Response', data);
+                } else {
+                    log('❌ ERROR: Failed to fetch videos', 'error');
+                    logJSON('Full Response', data);
+                }
+
+            } catch (error) {
+                log('❌ ERROR: ' + error.message, 'error');
+                console.error('Full error:', error);
+            }
+        }
+    </script>
+</body>
+</html>
