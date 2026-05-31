@@ -27,3 +27,7 @@ pandas==2.2.2
 
 # Utilities
 python-dateutil==2.9.0
+
+# Production server
+gunicorn==21.2.0
+Flask==3.0.0
