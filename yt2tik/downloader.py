@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Optional, Dict
 import yt_dlp
 from tqdm import tqdm
-from .config import DOWNLOAD_DIR, YOUTUBE_PREFERRED_QUALITY, YOUTUBE_FALLBACK_QUALITY
+from .config import DOWNLOAD_DIR, YOUTUBE_PREFERRED_QUALITY, YOUTUBE_FALLBACK_QUALITY, YOUTUBE_COOKIES_FILE
 from .logger import get_logger
 
 logger = get_logger()
@@ -97,6 +97,11 @@ def download_youtube_video(url: str) -> Dict[str, any]:
         'keepvideo': False,
         'merge_output_format': 'mp4',
     }
+
+    # Add cookies if available (for age-restricted videos)
+    if YOUTUBE_COOKIES_FILE.exists():
+        ydl_opts['cookiefile'] = str(YOUTUBE_COOKIES_FILE)
+        logger.info("Using YouTube cookies for authentication")
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:

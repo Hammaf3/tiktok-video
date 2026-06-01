@@ -1,0 +1,18 @@
+# Netscape HTTP Cookie File
+# This is a generated file! Do not edit.
+#
+# ⚠️ IMPORTANT: This is just an EXAMPLE file
+#
+# To download age-restricted videos, you need to:
+# 1. Install browser extension "Get cookies.txt LOCALLY"
+# 2. Login to YouTube in your browser
+# 3. Export cookies using the extension
+# 4. Rename the exported file to: youtube_cookies.txt
+# 5. Place it in the project root directory
+#
+# See COOKIES_SETUP.md for detailed instructions
+#
+# Format example (your actual cookies will look like this):
+# .youtube.com	TRUE	/	TRUE	1234567890	CONSENT	YES+cb.20210101-00-p0.en+FX+123
+# .youtube.com	TRUE	/	FALSE	1234567890	VISITOR_INFO1_LIVE	abcdefghijk
+# .youtube.com	TRUE	/	TRUE	1234567890	LOGIN_INFO	AFmmF2swRQIhAI...

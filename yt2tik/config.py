@@ -37,6 +37,7 @@ FFMPEG_CRF = "23"  # Constant Rate Factor for quality (18-28, lower=better)
 # YouTube Download
 YOUTUBE_PREFERRED_QUALITY = "1080p"
 YOUTUBE_FALLBACK_QUALITY = "720p"
+YOUTUBE_COOKIES_FILE = BASE_DIR / "youtube_cookies.txt"  # Optional: for age-restricted videos
 
 # Default hashtags
 DEFAULT_HASHTAGS = ["#fyp", "#foryoupage", "#viral"]

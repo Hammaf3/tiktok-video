@@ -40,6 +40,10 @@ ENV/
 # Environment variables
 .env
 
+# YouTube cookies (contains sensitive authentication data)
+youtube_cookies.txt
+cookies.txt
+
 # Logs
 logs/
 *.log

@@ -262,7 +262,44 @@ tiktok-video-uploader/
 
 ---
 
+## 🍪 Age-Restricted Videos Support
+
+To download age-restricted YouTube videos, you need to provide YouTube cookies:
+
+1. **See detailed guide:** `COOKIES_SETUP.md`
+2. **Quick steps:**
+   - Install browser extension "Get cookies.txt LOCALLY"
+   - Login to YouTube
+   - Export cookies
+   - Save as `youtube_cookies.txt` in project root
+
+The app will automatically use cookies if the file exists.
+
+---
+
+## 🚀 Deployment
+
+**Important:** This app cannot run on Vercel (serverless limitations).
+
+**Recommended Platform:** Railway.app
+
+See detailed deployment guide: `DEPLOYMENT_GUIDE.md`
+
+**Quick Deploy to Railway:**
+1. Push code to GitHub
+2. Sign up at railway.app
+3. Deploy from GitHub repo
+4. Add environment variables
+5. Done! App will be live in 2-3 minutes
+
+---
+
 ## 🔧 Troubleshooting
+
+### Age-restricted video error
+- **Solution:** Setup YouTube cookies (see `COOKIES_SETUP.md`)
+- Export cookies from your browser after logging into YouTube
+- Place `youtube_cookies.txt` in project root
 
 ### FFmpeg not found
 ```bash
@@ -281,9 +318,10 @@ ffmpeg -version
 - If refresh fails, generate a new token from TikTok Developer Portal
 
 ### YouTube download fails
-- Video may be private, age-restricted, or geo-blocked
-- Try a different video
-- Check if yt-dlp needs updating: `pip install -U yt-dlp`
+- **Age-restricted videos:** Setup cookies (see `COOKIES_SETUP.md`)
+- **Private videos:** Cannot be downloaded
+- **Geo-blocked:** Try using a VPN
+- **Update yt-dlp:** `pip install -U yt-dlp`
 
 ### Video file too large (>72MB)
 - Reduce `--duration` (try 30s instead of 60s)
