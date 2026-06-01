@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Optional, Dict
 import yt_dlp
 from tqdm import tqdm
-from .config import DOWNLOAD_DIR, YOUTUBE_PREFERRED_QUALITY, YOUTUBE_FALLBACK_QUALITY, YOUTUBE_COOKIES_FILE
+from .config import DOWNLOAD_DIR, YOUTUBE_COOKIES_FILE
 from .logger import get_logger
 
 logger = get_logger()
@@ -111,7 +111,8 @@ def download_youtube_video(url: str) -> Dict[str, any]:
 
     # Most flexible yt-dlp options - accept ANY format
     ydl_opts = {
-        # No format specification - let yt-dlp choose automatically
+        # Maximum flexibility: try best quality, then any available format
+        'format': 'bestvideo+bestaudio/best/bestvideo/bestaudio/worst',
         'outtmpl': str(DOWNLOAD_DIR / '%(title)s.%(ext)s'),
         'progress_hooks': [progress_bar],
         'quiet': True,
@@ -135,6 +136,7 @@ def download_youtube_video(url: str) -> Dict[str, any]:
         'fragment_retries': 3,
         'skip_unavailable_fragments': True,
         'keepvideo': False,
+        'merge_output_format': 'mp4',  # Merge to MP4 if separate video/audio
     }
 
     # Add cookies if available (for age-restricted videos)
