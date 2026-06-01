@@ -198,9 +198,15 @@ def download_youtube_video(url: str) -> Dict[str, any]:
     except yt_dlp.utils.DownloadError as e:
         error_msg = str(e).lower()
 
+        # Show actual error for debugging
+        print(f"🔴 yt-dlp error: {str(e)}")
+
         if 'private video' in error_msg:
             raise Exception("This video is private and cannot be downloaded.")
-        elif 'video unavailable' in error_msg or 'not available' in error_msg:
+        elif 'format' in error_msg and 'not available' in error_msg:
+            # Format error - show actual message for debugging
+            raise Exception(f"Format error: {str(e)}")
+        elif 'video unavailable' in error_msg:
             raise Exception("Video unavailable. It may be deleted, private, or region-locked. Please try a different video.")
         elif 'sign in' in error_msg or 'age' in error_msg:
             raise Exception("Age-restricted video. Cannot download without authentication. Try a different video.")
@@ -211,6 +217,7 @@ def download_youtube_video(url: str) -> Dict[str, any]:
         elif 'members-only' in error_msg or 'membership' in error_msg:
             raise Exception("This is a members-only video. Please try a different video.")
         else:
+            # Show actual error message
             raise Exception(f"Download failed: {str(e)}")
 
     except Exception as e:
