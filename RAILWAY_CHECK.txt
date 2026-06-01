@@ -1,0 +1,29 @@
+═══════════════════════════════════════════════════════════════
+  RAILWAY DEPLOYMENT CHECK
+═══════════════════════════════════════════════════════════════
+
+1. Open Railway Dashboard:
+   → https://railway.app/dashboard
+
+2. Select your project: "tiktok-video-production"
+
+3. Click "Deployments" tab (left sidebar)
+
+4. Check latest deployment:
+
+   ✅ If status = "Success" → Code is deployed, proceed to Step 2
+   ⏳ If status = "Building/Deploying" → Wait 2 minutes, then check again
+   ❌ If status = "Failed" → Check logs for errors
+
+5. Look for this in deployment logs:
+   → Click on latest deployment
+   → Click "View Logs"
+   → Search for: "YouTube cookies" or "YOUTUBE_COOKIES"
+
+   You should see code that checks for cookies (even if not found yet)
+
+═══════════════════════════════════════════════════════════════
+
+Once deployment shows "Success", proceed to next step!
+
+═══════════════════════════════════════════════════════════════

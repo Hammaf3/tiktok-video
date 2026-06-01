@@ -1,0 +1,183 @@
+╔═══════════════════════════════════════════════════════════════╗
+║                                                               ║
+║  🎯 FIX AGE-RESTRICTED VIDEO ERROR - COMPLETE GUIDE          ║
+║                                                               ║
+║  Total Time: 10-15 minutes                                    ║
+║  Difficulty: Easy (just follow steps)                         ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
+
+┌───────────────────────────────────────────────────────────────┐
+│ WHAT'S THE PROBLEM?                                           │
+└───────────────────────────────────────────────────────────────┘
+
+❌ Error: "Age-restricted video. Please try a different video."
+📍 Where: https://tiktok-video-production.up.railway.app
+🔍 Why: YouTube needs authentication to download age-restricted videos
+
+┌───────────────────────────────────────────────────────────────┐
+│ WHAT'S THE SOLUTION?                                          │
+└───────────────────────────────────────────────────────────────┘
+
+✅ Export your YouTube cookies (proves you're logged in)
+✅ Add them to Railway as an environment variable
+✅ Railway will use them to authenticate with YouTube
+
+┌───────────────────────────────────────────────────────────────┐
+│ WHAT'S ALREADY DONE?                                          │
+└───────────────────────────────────────────────────────────────┘
+
+✅ Code updated (supports cookies now)
+✅ Pushed to GitHub
+✅ Railway will auto-redeploy (or already has)
+
+┌───────────────────────────────────────────────────────────────┐
+│ WHAT YOU NEED TO DO NOW?                                      │
+└───────────────────────────────────────────────────────────────┘
+
+Just 4 simple steps:
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 1: Check Railway Deployment (1 minute)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+→ Open: https://railway.app/dashboard
+→ Select: "tiktok-video-production"
+→ Click: "Deployments" tab
+→ Check: Latest deployment status = "Success"?
+
+If YES → Proceed to Step 2
+If NO (Building/Deploying) → Wait 2 minutes, check again
+If FAILED → Check logs, let me know the error
+
+📄 Detailed guide: RAILWAY_CHECK.txt
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 2: Export YouTube Cookies (3 minutes)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+A. Install browser extension:
+   Chrome: https://chrome.google.com/webstore/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc
+   → Click "Add to Chrome"
+
+B. Go to YouTube:
+   → https://youtube.com
+   → Make sure you're logged in
+
+C. Export cookies:
+   → Click extension icon (top-right corner)
+   → Click "Export" button
+   → File downloads: youtube.com_cookies.txt
+
+D. Verify:
+   → Check Downloads folder
+   → File should be there (~5-10 KB)
+
+📄 Detailed guide: STEP_2_EXPORT_COOKIES.txt
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 3: Convert to Base64 (3 minutes)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+A. Open PowerShell:
+   → Press Windows Key + X
+   → Click "Windows PowerShell"
+
+B. Run these commands (copy-paste one by one):
+
+cd "C:\Users\Faraz\Downloads"
+
+Rename-Item "youtube.com_cookies.txt" "youtube_cookies.txt"
+
+$content = Get-Content youtube_cookies.txt -Raw; $bytes = [System.Text.Encoding]::UTF8.GetBytes($content); $encoded = [Convert]::ToBase64String($bytes); $encoded | Out-File "youtube_cookies_base64.txt"; Write-Host "COPY THIS STRING:" -ForegroundColor Green; Write-Host $encoded
+
+C. Copy the output:
+   → A VERY LONG string will appear (5000+ characters)
+   → Select all (CTRL+A)
+   → Copy (CTRL+C)
+   → Or open: youtube_cookies_base64.txt and copy from there
+
+📄 Detailed guide: STEP_3_CONVERT_BASE64.txt
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 4: Add to Railway (3 minutes)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+A. Open Railway:
+   → https://railway.app/dashboard
+   → Select: "tiktok-video-production"
+
+B. Add variable:
+   → Click: "Variables" tab
+   → Click: "New Variable"
+   → Name: YOUTUBE_COOKIES_BASE64
+   → Value: [Paste the long string from Step 3]
+   → Click: "Add"
+
+C. Wait for redeploy:
+   → Railway auto-redeploys (2-3 minutes)
+   → Go to "Deployments" tab
+   → Wait for "Success" status
+
+D. TEST:
+   → Open: https://tiktok-video-production.up.railway.app
+   → Try age-restricted video
+   → Should work! 🎉
+
+📄 Detailed guide: STEP_4_ADD_TO_RAILWAY.txt
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+┌───────────────────────────────────────────────────────────────┐
+│ QUICK CHECKLIST                                               │
+└───────────────────────────────────────────────────────────────┘
+
+□ Railway deployment = Success
+□ Browser extension installed
+□ YouTube cookies exported
+□ Cookies converted to Base64
+□ Base64 string copied
+□ Added to Railway as YOUTUBE_COOKIES_BASE64
+□ Railway redeployed successfully
+□ Tested age-restricted video
+□ IT WORKS! 🎉
+
+┌───────────────────────────────────────────────────────────────┐
+│ TROUBLESHOOTING                                               │
+└───────────────────────────────────────────────────────────────┘
+
+❌ Still getting error after all steps?
+
+1. Check variable name is EXACTLY: YOUTUBE_COOKIES_BASE64
+2. Check you pasted the ENTIRE base64 string (5000+ chars)
+3. Check Railway deployment succeeded
+4. Try fresh cookies (logout → login → export again)
+5. Check Railway logs for error messages
+
+┌───────────────────────────────────────────────────────────────┐
+│ FILES IN YOUR PROJECT FOLDER                                  │
+└───────────────────────────────────────────────────────────────┘
+
+📄 DO_THIS_NOW.txt ................... Quick action items
+📄 RAILWAY_CHECK.txt ................. Step 1 detailed
+📄 STEP_2_EXPORT_COOKIES.txt ......... Step 2 detailed
+📄 STEP_3_CONVERT_BASE64.txt ......... Step 3 detailed
+📄 STEP_4_ADD_TO_RAILWAY.txt ......... Step 4 detailed
+📄 COOKIES_SETUP.md .................. General cookie guide
+📄 RAILWAY_COOKIES_SETUP.md .......... Railway-specific guide
+📄 DEPLOYMENT_GUIDE.md ............... Full deployment guide
+
+┌───────────────────────────────────────────────────────────────┐
+│ START HERE                                                    │
+└───────────────────────────────────────────────────────────────┘
+
+👉 Begin with STEP 1 above
+👉 Follow each step in order
+👉 Don't skip any step
+👉 If stuck, check the detailed guide for that step
+
+╔═══════════════════════════════════════════════════════════════╗
+║                                                               ║
+║  🚀 READY? START WITH STEP 1 NOW!                            ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝

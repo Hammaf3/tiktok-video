@@ -1,0 +1,83 @@
+═══════════════════════════════════════════════════════════════
+  STEP 2: EXPORT YOUTUBE COOKIES
+═══════════════════════════════════════════════════════════════
+
+Part A: Install Browser Extension (2 minutes)
+───────────────────────────────────────────────────────────────
+
+FOR CHROME/EDGE USERS:
+
+1. Open this link in a NEW TAB:
+   https://chrome.google.com/webstore/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc
+
+2. Click the blue "Add to Chrome" button
+
+3. Click "Add extension" in the popup
+
+4. Extension installed! (You'll see a puzzle icon in toolbar)
+
+FOR FIREFOX USERS:
+
+1. Open this link:
+   https://addons.mozilla.org/en-US/firefox/addon/cookies-txt/
+
+2. Click "Add to Firefox"
+
+3. Click "Add" in the popup
+
+───────────────────────────────────────────────────────────────
+Part B: Export Cookies from YouTube (3 minutes)
+───────────────────────────────────────────────────────────────
+
+1. Open YouTube in a NEW TAB:
+   → https://youtube.com
+
+2. Make sure you're LOGGED IN:
+   → Check top-right corner for your profile picture
+   → If not logged in, click "Sign In" and login
+   → Use an account that can view age-restricted videos (18+ verified)
+
+3. Find the extension icon:
+   → Look in browser toolbar (top-right)
+   → You'll see a cookie icon or puzzle piece icon
+   → Click on it to see "Get cookies.txt LOCALLY"
+
+4. Click the extension icon:
+   → A popup will open
+   → You'll see "Export" button
+   → Click "Export"
+
+5. File will download:
+   → File name: youtube.com_cookies.txt
+   → Location: Usually C:\Users\Faraz\Downloads\
+   → File size: ~5-10 KB
+
+6. VERIFY the file downloaded:
+   → Open File Explorer
+   → Go to Downloads folder
+   → Look for: youtube.com_cookies.txt
+   → If you see it, SUCCESS! Proceed to Step 3
+
+═══════════════════════════════════════════════════════════════
+
+TROUBLESHOOTING:
+
+❌ Extension icon not showing?
+   → Click the puzzle piece icon in toolbar
+   → Pin the "Get cookies.txt" extension
+
+❌ Export button not working?
+   → Make sure you're on youtube.com (not another site)
+   → Refresh the YouTube page
+   → Try clicking extension icon again
+
+❌ Not logged into YouTube?
+   → Click "Sign In" on YouTube
+   → Use your Google account
+   → Make sure account is 18+ verified
+
+═══════════════════════════════════════════════════════════════
+
+Once file is downloaded, proceed to Step 3!
+
+═══════════════════════════════════════════════════════════════

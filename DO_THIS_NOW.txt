@@ -1,0 +1,102 @@
+═══════════════════════════════════════════════════════════════════
+  🎯 AGE-RESTRICTED VIDEO FIX - ACTION REQUIRED
+═══════════════════════════════════════════════════════════════════
+
+✅ Code: FIXED and pushed to GitHub
+✅ Railway: Will auto-redeploy
+⏳ YOU: Need to add YouTube cookies (15 minutes)
+
+───────────────────────────────────────────────────────────────────
+STEP 1: Install Browser Extension (2 minutes)
+───────────────────────────────────────────────────────────────────
+
+Chrome/Edge:
+→ Open: https://chrome.google.com/webstore/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc
+→ Click "Add to Chrome"
+
+Firefox:
+→ Open: https://addons.mozilla.org/en-US/firefox/addon/cookies-txt/
+→ Click "Add to Firefox"
+
+───────────────────────────────────────────────────────────────────
+STEP 2: Export YouTube Cookies (3 minutes)
+───────────────────────────────────────────────────────────────────
+
+1. Go to: https://youtube.com
+2. Make sure you're logged in (account that can view age-restricted videos)
+3. Click the extension icon (top-right corner of browser)
+4. Click "Export" button
+5. File will download: youtube.com_cookies.txt
+
+───────────────────────────────────────────────────────────────────
+STEP 3: Convert to Base64 (5 minutes)
+───────────────────────────────────────────────────────────────────
+
+Open Windows PowerShell and run these commands:
+
+cd "C:\Users\Faraz\Downloads"
+Rename-Item "youtube.com_cookies.txt" "youtube_cookies.txt"
+$content = Get-Content youtube_cookies.txt -Raw
+$bytes = [System.Text.Encoding]::UTF8.GetBytes($content)
+$encoded = [Convert]::ToBase64String($bytes)
+$encoded | Out-File "youtube_cookies_base64.txt"
+Write-Host "═══════════════════════════════════════════════════" -ForegroundColor Cyan
+Write-Host "COPY THIS ENTIRE STRING (it's very long):" -ForegroundColor Green
+Write-Host "═══════════════════════════════════════════════════" -ForegroundColor Cyan
+Write-Host $encoded
+Write-Host "═══════════════════════════════════════════════════" -ForegroundColor Cyan
+Write-Host "Also saved to: youtube_cookies_base64.txt" -ForegroundColor Yellow
+
+→ Copy the ENTIRE encoded string that appears (5000+ characters)
+
+───────────────────────────────────────────────────────────────────
+STEP 4: Add to Railway (3 minutes)
+───────────────────────────────────────────────────────────────────
+
+1. Open: https://railway.app/dashboard
+2. Select project: "tiktok-video-production"
+3. Click "Variables" tab (left sidebar)
+4. Click "New Variable" button
+5. Enter:
+   Name:  YOUTUBE_COOKIES_BASE64
+   Value: [Paste the encoded string from Step 3]
+6. Click "Add"
+
+───────────────────────────────────────────────────────────────────
+STEP 5: Wait for Redeploy (2-3 minutes)
+───────────────────────────────────────────────────────────────────
+
+→ Railway will automatically redeploy
+→ Go to "Deployments" tab
+→ Wait until status shows "Success"
+
+───────────────────────────────────────────────────────────────────
+STEP 6: TEST! 🎉
+───────────────────────────────────────────────────────────────────
+
+→ Open: https://tiktok-video-production.up.railway.app
+→ Try an age-restricted video
+→ Should work now!
+
+═══════════════════════════════════════════════════════════════════
+TROUBLESHOOTING
+═══════════════════════════════════════════════════════════════════
+
+Still getting error?
+
+1. Check variable name is EXACTLY: YOUTUBE_COOKIES_BASE64
+2. Make sure you copied the ENTIRE encoded string
+3. Check Railway deployment succeeded (Deployments tab)
+4. Try fresh cookies (logout → login → export again)
+
+═══════════════════════════════════════════════════════════════════
+DETAILED GUIDES
+═══════════════════════════════════════════════════════════════════
+
+→ STEP_BY_STEP_FIX.md (detailed instructions)
+→ RAILWAY_COOKIES_SETUP.md (Railway-specific guide)
+→ COOKIES_SETUP.md (general cookie setup)
+
+═══════════════════════════════════════════════════════════════════
+
+Start with STEP 1 now! 👆

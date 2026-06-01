@@ -1,0 +1,149 @@
+═══════════════════════════════════════════════════════════════
+  STEP 4: ADD TO RAILWAY (FINAL STEP!)
+═══════════════════════════════════════════════════════════════
+
+Part A: Open Railway Dashboard (1 minute)
+───────────────────────────────────────────────────────────────
+
+1. Open this link:
+   → https://railway.app/dashboard
+
+2. Login if needed (GitHub login)
+
+3. Find your project:
+   → Look for: "tiktok-video-production"
+   → Click on it
+
+───────────────────────────────────────────────────────────────
+Part B: Add Environment Variable (2 minutes)
+───────────────────────────────────────────────────────────────
+
+1. Click "Variables" tab:
+   → Look in the left sidebar
+   → Click "Variables"
+
+2. Click "New Variable" button:
+   → It's usually at the top
+   → Or click "+ Add Variable"
+
+3. Enter the variable details:
+
+   ┌─────────────────────────────────────────────────────────┐
+   │ Variable Name:                                          │
+   │ YOUTUBE_COOKIES_BASE64                                  │
+   │                                                         │
+   │ ⚠️ IMPORTANT: Type this EXACTLY as shown above!        │
+   │    - All CAPITAL letters                               │
+   │    - No spaces                                         │
+   │    - Underscores in the right places                   │
+   └─────────────────────────────────────────────────────────┘
+
+   ┌─────────────────────────────────────────────────────────┐
+   │ Value:                                                  │
+   │ [PASTE THE LONG BASE64 STRING FROM STEP 3 HERE]        │
+   │                                                         │
+   │ ⚠️ Make sure you paste the ENTIRE string!              │
+   │    - Should be 5000+ characters long                   │
+   │    - No extra spaces at start or end                   │
+   │    - Should look like: IyBOZXRzY2FwZSBIVFRQIENvb2t...  │
+   └─────────────────────────────────────────────────────────┘
+
+4. Click "Add" or "Save" button
+
+5. VERIFY the variable was added:
+   → You should see "YOUTUBE_COOKIES_BASE64" in the list
+   → Value will be hidden (shows as dots for security)
+
+───────────────────────────────────────────────────────────────
+Part C: Wait for Redeploy (2-3 minutes)
+───────────────────────────────────────────────────────────────
+
+1. Railway will automatically redeploy:
+   → Adding a variable triggers automatic redeploy
+   → You'll see a notification
+
+2. Check deployment status:
+   → Click "Deployments" tab (left sidebar)
+   → Look at the latest deployment
+   → Status should change: Building → Deploying → Success
+
+3. Wait until status = "Success"
+   → Usually takes 2-3 minutes
+   → Don't close the browser
+
+4. Check logs (OPTIONAL but recommended):
+   → Click on the latest deployment
+   → Click "View Logs"
+   → Look for this message:
+     "✅ YouTube cookies loaded from environment variable"
+   → If you see this, PERFECT!
+
+───────────────────────────────────────────────────────────────
+Part D: TEST! (1 minute)
+───────────────────────────────────────────────────────────────
+
+1. Open your Railway app:
+   → https://tiktok-video-production.up.railway.app
+
+2. Try an age-restricted video:
+   → Paste a YouTube URL that's age-restricted
+   → Click "Convert" or "Download"
+
+3. SUCCESS! 🎉
+   → Video should download without error
+   → No more "Age-restricted video" error
+
+═══════════════════════════════════════════════════════════════
+
+TROUBLESHOOTING:
+
+❌ Still getting "Age-restricted video" error?
+
+Check 1: Variable name is EXACTLY correct?
+   → Go to Railway → Variables
+   → Name should be: YOUTUBE_COOKIES_BASE64
+   → Check spelling, capitals, underscores
+
+Check 2: Did you paste the ENTIRE string?
+   → Value should be 5000+ characters
+   → No spaces at start/end
+   → Starts with something like: IyBOZXRzY2FwZSBI...
+
+Check 3: Deployment succeeded?
+   → Go to Deployments tab
+   → Latest deployment shows "Success"?
+   → If "Failed", check logs for errors
+
+Check 4: Cookies are fresh?
+   → YouTube cookies expire
+   → Try exporting fresh cookies
+   → Logout from YouTube → Login → Export again
+
+Check 5: Correct YouTube account?
+   → Account must be 18+ verified
+   → Must be able to view age-restricted videos
+   → Try watching an age-restricted video on YouTube first
+
+═══════════════════════════════════════════════════════════════
+
+STILL NOT WORKING?
+
+1. Check Railway logs:
+   → Deployments → Latest → View Logs
+   → Look for error messages
+   → Share the error with me
+
+2. Verify cookies file format:
+   → Open youtube_cookies.txt in Notepad
+   → First line should be: # Netscape HTTP Cookie File
+   → If not, re-export cookies
+
+3. Try a different browser:
+   → Sometimes one browser works better
+   → Chrome usually works best
+
+═══════════════════════════════════════════════════════════════
+
+🎉 CONGRATULATIONS! Age-restricted videos should work now!
+
+═══════════════════════════════════════════════════════════════

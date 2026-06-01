@@ -1,0 +1,116 @@
+═══════════════════════════════════════════════════════════════
+  STEP 3: CONVERT COOKIES TO BASE64
+═══════════════════════════════════════════════════════════════
+
+Part A: Open PowerShell (1 minute)
+───────────────────────────────────────────────────────────────
+
+1. Press Windows Key + X
+2. Click "Windows PowerShell" or "Terminal"
+3. A blue/black window will open
+
+───────────────────────────────────────────────────────────────
+Part B: Run These Commands (3 minutes)
+───────────────────────────────────────────────────────────────
+
+COPY AND PASTE these commands ONE BY ONE:
+
+Command 1: Go to Downloads folder
+──────────────────────────────────
+cd "C:\Users\Faraz\Downloads"
+
+Press ENTER
+
+
+Command 2: Check if file exists
+──────────────────────────────────
+dir youtube.com_cookies.txt
+
+Press ENTER
+
+You should see the file listed. If not, check Downloads folder location.
+
+
+Command 3: Rename the file
+──────────────────────────────────
+Rename-Item "youtube.com_cookies.txt" "youtube_cookies.txt"
+
+Press ENTER
+
+
+Command 4: Convert to Base64 (THIS IS THE IMPORTANT ONE!)
+──────────────────────────────────────────────────────────
+$content = Get-Content youtube_cookies.txt -Raw
+$bytes = [System.Text.Encoding]::UTF8.GetBytes($content)
+$encoded = [Convert]::ToBase64String($bytes)
+$encoded | Out-File "youtube_cookies_base64.txt"
+Write-Host ""
+Write-Host "═══════════════════════════════════════════════════════════" -ForegroundColor Cyan
+Write-Host "  COPY THIS ENTIRE STRING BELOW (Very Long - 5000+ chars)" -ForegroundColor Green
+Write-Host "═══════════════════════════════════════════════════════════" -ForegroundColor Cyan
+Write-Host ""
+Write-Host $encoded
+Write-Host ""
+Write-Host "═══════════════════════════════════════════════════════════" -ForegroundColor Cyan
+Write-Host "  Also saved to: youtube_cookies_base64.txt" -ForegroundColor Yellow
+Write-Host "═══════════════════════════════════════════════════════════" -ForegroundColor Cyan
+
+Press ENTER
+
+───────────────────────────────────────────────────────────────
+Part C: Copy the Encoded String
+───────────────────────────────────────────────────────────────
+
+1. A VERY LONG string will appear (5000+ characters)
+
+2. SELECT ALL of it:
+   → Click at the start of the string
+   → Hold SHIFT
+   → Click at the end of the string
+   → OR: Press CTRL+A to select all
+
+3. COPY it:
+   → Right-click → Copy
+   → OR: Press CTRL+C
+
+4. VERIFY you copied it:
+   → Open Notepad
+   → Paste (CTRL+V)
+   → You should see a very long string of random letters/numbers
+   → If yes, SUCCESS!
+
+═══════════════════════════════════════════════════════════════
+
+ALTERNATIVE METHOD (If PowerShell doesn't work):
+
+1. Open the file: youtube_cookies_base64.txt
+   → It's in your Downloads folder
+   → Right-click → Open with Notepad
+
+2. Select ALL text (CTRL+A)
+
+3. Copy (CTRL+C)
+
+═══════════════════════════════════════════════════════════════
+
+TROUBLESHOOTING:
+
+❌ "File not found" error?
+   → Make sure you're in Downloads folder
+   → Check if file name is exactly: youtube.com_cookies.txt
+   → Try: dir *.txt to see all text files
+
+❌ PowerShell commands not working?
+   → Make sure you're in PowerShell (not Command Prompt)
+   → Copy commands one by one, don't paste all at once
+
+❌ String too long to copy?
+   → Use the alternative method above
+   → Open youtube_cookies_base64.txt file
+   → Copy from there
+
+═══════════════════════════════════════════════════════════════
+
+Once you have the encoded string copied, proceed to Step 4!
+
+═══════════════════════════════════════════════════════════════
