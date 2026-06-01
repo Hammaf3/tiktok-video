@@ -107,7 +107,8 @@ def download_youtube_video(url: str) -> Dict[str, any]:
 
     # Enhanced yt-dlp options for better compatibility
     ydl_opts = {
-        'format': 'best[ext=mp4]/bestvideo[ext=mp4]+bestaudio[ext=m4a]/best',
+        # Flexible format selection - try MP4 first, but accept any format and convert
+        'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/bestvideo+bestaudio/best',
         'outtmpl': str(DOWNLOAD_DIR / '%(title)s.%(ext)s'),
         'progress_hooks': [progress_bar],
         'quiet': True,
@@ -131,7 +132,8 @@ def download_youtube_video(url: str) -> Dict[str, any]:
         'fragment_retries': 3,
         'skip_unavailable_fragments': True,
         'keepvideo': False,
-        'merge_output_format': 'mp4',
+        'merge_output_format': 'mp4',  # Always output as MP4
+        'postprocessor_args': ['-c:v', 'copy', '-c:a', 'aac'],  # Fast conversion
     }
 
     # Add cookies if available (for age-restricted videos)
