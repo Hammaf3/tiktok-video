@@ -1142,7 +1142,7 @@ def not_found_error(error):
     """Handle 404 errors"""
     if request.path.startswith('/api/') or request.path.startswith('/download/'):
         return jsonify({'error': 'Resource not found'}), 404
-    return render_template('integrated.html', error_message='Page not found'), 404
+    return render_template('integrated.html', error_message='Page not found', countries=COUNTRIES, tiktok_connected=False, youtube_connected=False), 404
 
 
 @app.errorhandler(500)
@@ -1151,7 +1151,7 @@ def internal_error(error):
     print(f"Internal server error: {str(error)}")
     if request.path.startswith('/api/') or request.is_json:
         return jsonify({'error': 'Internal server error. Please try again later.'}), 500
-    return render_template('integrated.html', error_message='An error occurred. Please try again.'), 500
+    return render_template('integrated.html', error_message='An error occurred. Please try again.', countries=COUNTRIES, tiktok_connected=False, youtube_connected=False), 500
 
 
 @app.errorhandler(413)

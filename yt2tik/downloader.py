@@ -21,20 +21,28 @@ def setup_cookies_from_env():
     """
     env_cookies = os.getenv('YOUTUBE_COOKIES_BASE64')
 
-    if env_cookies and not YOUTUBE_COOKIES_FILE.exists():
+    if env_cookies:
         try:
+            # Ensure parent directory exists
+            YOUTUBE_COOKIES_FILE.parent.mkdir(parents=True, exist_ok=True)
+
             # Decode base64 cookies
             decoded_cookies = base64.b64decode(env_cookies).decode('utf-8')
 
-            # Write to cookies file
+            # Always write to cookies file (overwrite if exists)
             YOUTUBE_COOKIES_FILE.write_text(decoded_cookies, encoding='utf-8')
-            logger.info("✅ YouTube cookies loaded from environment variable")
+            logger.info(f"✅ YouTube cookies loaded from environment variable to {YOUTUBE_COOKIES_FILE}")
             return True
         except Exception as e:
-            logger.warning(f"Failed to decode cookies from environment: {e}")
+            logger.error(f"❌ Failed to decode cookies from environment: {e}")
             return False
 
-    return YOUTUBE_COOKIES_FILE.exists()
+    if YOUTUBE_COOKIES_FILE.exists():
+        logger.info(f"✅ Using existing cookies file: {YOUTUBE_COOKIES_FILE}")
+        return True
+
+    logger.warning("⚠️ No YouTube cookies found (neither env var nor file)")
+    return False
 
 
 class DownloadProgressBar:
