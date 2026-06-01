@@ -2,6 +2,8 @@
 YouTube video downloader using yt-dlp
 """
 import re
+import os
+import base64
 from pathlib import Path
 from typing import Optional, Dict
 import yt_dlp
@@ -10,6 +12,29 @@ from .config import DOWNLOAD_DIR, YOUTUBE_PREFERRED_QUALITY, YOUTUBE_FALLBACK_QU
 from .logger import get_logger
 
 logger = get_logger()
+
+
+def setup_cookies_from_env():
+    """
+    Setup cookies file from environment variable if available
+    This allows Railway/Render to use cookies via YOUTUBE_COOKIES_BASE64 env var
+    """
+    env_cookies = os.getenv('YOUTUBE_COOKIES_BASE64')
+
+    if env_cookies and not YOUTUBE_COOKIES_FILE.exists():
+        try:
+            # Decode base64 cookies
+            decoded_cookies = base64.b64decode(env_cookies).decode('utf-8')
+
+            # Write to cookies file
+            YOUTUBE_COOKIES_FILE.write_text(decoded_cookies, encoding='utf-8')
+            logger.info("✅ YouTube cookies loaded from environment variable")
+            return True
+        except Exception as e:
+            logger.warning(f"Failed to decode cookies from environment: {e}")
+            return False
+
+    return YOUTUBE_COOKIES_FILE.exists()
 
 
 class DownloadProgressBar:
@@ -66,6 +91,9 @@ def download_youtube_video(url: str) -> Dict[str, any]:
         Exception: If download fails
     """
     logger.info(f"Starting download from: {url}")
+
+    # Setup cookies from environment variable if available
+    setup_cookies_from_env()
 
     progress_bar = DownloadProgressBar()
 
