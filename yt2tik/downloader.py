@@ -149,6 +149,12 @@ def download_youtube_video(url: str) -> Dict[str, any]:
             logger.info(f"Video: {title}")
             logger.info(f"Duration: {duration}s")
 
+            # Log available formats for debugging
+            if 'formats' in info:
+                print(f"📋 Available formats: {len(info['formats'])} formats found")
+                for fmt in info['formats'][:5]:  # Show first 5 formats
+                    print(f"  - Format {fmt.get('format_id')}: {fmt.get('ext')} {fmt.get('resolution', 'audio')}")
+
             # Download the video
             logger.debug("Starting download...")
             ydl.download([url])
