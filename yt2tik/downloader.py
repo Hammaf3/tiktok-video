@@ -119,8 +119,15 @@ def download_youtube_video(url: str) -> Dict[str, any]:
         'extract_flat': False,
         'ignoreerrors': False,
         'no_color': True,
+        # CRITICAL: Use Android client to bypass JavaScript challenges
+        'extractor_args': {
+            'youtube': {
+                'player_client': ['android', 'web'],  # Android client doesn't need JS challenges
+                'skip': ['dash', 'hls'],  # Skip problematic formats
+            }
+        },
         'http_headers': {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'User-Agent': 'com.google.android.youtube/17.36.4 (Linux; U; Android 12; GB) gzip',
         },
     }
 
