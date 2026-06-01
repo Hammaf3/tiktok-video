@@ -109,26 +109,9 @@ def download_youtube_video(url: str) -> Dict[str, any]:
 
     progress_bar = DownloadProgressBar()
 
-    # Minimal yt-dlp options - let yt-dlp handle format selection automatically
+    # ABSOLUTE MINIMUM yt-dlp config - let it handle everything automatically
     ydl_opts = {
-        # NO format parameter - let yt-dlp use its smart defaults
         'outtmpl': str(DOWNLOAD_DIR / '%(title)s.%(ext)s'),
-        'progress_hooks': [progress_bar],
-        'quiet': False,  # Show output for debugging
-        'no_warnings': False,
-        'extract_flat': False,
-        'ignoreerrors': False,
-        'no_color': True,
-        # CRITICAL: Use Android client to bypass JavaScript challenges
-        'extractor_args': {
-            'youtube': {
-                'player_client': ['android', 'web'],  # Android client doesn't need JS challenges
-                'skip': ['dash', 'hls'],  # Skip problematic formats
-            }
-        },
-        'http_headers': {
-            'User-Agent': 'com.google.android.youtube/17.36.4 (Linux; U; Android 12; GB) gzip',
-        },
     }
 
     # Add cookies if available (for age-restricted videos)
