@@ -1,8 +1,8 @@
 # yt2tik - YouTube to TikTok Converter
 # System 1 Requirements
 
-# YouTube downloading
-yt-dlp==2024.8.6
+# YouTube downloading (latest version for Railway compatibility)
+yt-dlp>=2024.12.23
 
 # Video processing
 ffmpeg-python==0.2.0
