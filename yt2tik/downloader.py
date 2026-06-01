@@ -109,34 +109,19 @@ def download_youtube_video(url: str) -> Dict[str, any]:
 
     progress_bar = DownloadProgressBar()
 
-    # Most flexible yt-dlp options - accept ANY format
+    # Minimal yt-dlp options - let yt-dlp handle format selection automatically
     ydl_opts = {
-        # Simplest format selection - just download whatever is available
-        'format': 'best/worst',  # Try best, if not available use worst (anything!)
+        # NO format parameter - let yt-dlp use its smart defaults
         'outtmpl': str(DOWNLOAD_DIR / '%(title)s.%(ext)s'),
         'progress_hooks': [progress_bar],
-        'quiet': False,  # Enable output to see what's happening
-        'no_warnings': False,  # Show warnings
-        'verbose': True,  # Verbose logging
+        'quiet': False,  # Show output for debugging
+        'no_warnings': False,
         'extract_flat': False,
-        'no_check_certificate': True,
-        'nocheckcertificate': True,
         'ignoreerrors': False,
         'no_color': True,
-        'geo_bypass': True,
-        'geo_bypass_country': 'US',
-        'age_limit': None,
         'http_headers': {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-            'Accept-Language': 'en-us,en;q=0.5',
-            'Accept-Encoding': 'gzip, deflate',
-            'Connection': 'keep-alive',
         },
-        'extractor_retries': 3,
-        'fragment_retries': 3,
-        'skip_unavailable_fragments': True,
-        'keepvideo': False,
     }
 
     # Add cookies if available (for age-restricted videos)
