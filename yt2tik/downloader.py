@@ -101,14 +101,17 @@ def download_youtube_video(url: str) -> Dict[str, any]:
     logger.info(f"Starting download from: {url}")
 
     # Setup cookies from environment variable if available
-    setup_cookies_from_env()
+    cookies_loaded = setup_cookies_from_env()
+    if cookies_loaded:
+        print(f"✅ Cookies loaded successfully")
+    else:
+        print(f"⚠️ No cookies loaded - age-restricted videos may fail")
 
     progress_bar = DownloadProgressBar()
 
-    # Enhanced yt-dlp options for better compatibility
+    # Most flexible yt-dlp options - accept ANY format
     ydl_opts = {
-        # Most flexible format selection - accept ANY format available
-        'format': 'best',  # Just get the best quality available, any format
+        # No format specification - let yt-dlp choose automatically
         'outtmpl': str(DOWNLOAD_DIR / '%(title)s.%(ext)s'),
         'progress_hooks': [progress_bar],
         'quiet': True,
@@ -121,7 +124,6 @@ def download_youtube_video(url: str) -> Dict[str, any]:
         'geo_bypass': True,
         'geo_bypass_country': 'US',
         'age_limit': None,
-        'prefer_free_formats': True,  # Prefer formats that don't require extra processing
         'http_headers': {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
