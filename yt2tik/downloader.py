@@ -111,12 +111,13 @@ def download_youtube_video(url: str) -> Dict[str, any]:
 
     # Most flexible yt-dlp options - accept ANY format
     ydl_opts = {
-        # Maximum flexibility: try best quality, then any available format
-        'format': 'bestvideo+bestaudio/best/bestvideo/bestaudio/worst',
+        # Simplest format selection - just download whatever is available
+        'format': 'best/worst',  # Try best, if not available use worst (anything!)
         'outtmpl': str(DOWNLOAD_DIR / '%(title)s.%(ext)s'),
         'progress_hooks': [progress_bar],
-        'quiet': True,
-        'no_warnings': True,
+        'quiet': False,  # Enable output to see what's happening
+        'no_warnings': False,  # Show warnings
+        'verbose': True,  # Verbose logging
         'extract_flat': False,
         'no_check_certificate': True,
         'nocheckcertificate': True,
@@ -136,7 +137,6 @@ def download_youtube_video(url: str) -> Dict[str, any]:
         'fragment_retries': 3,
         'skip_unavailable_fragments': True,
         'keepvideo': False,
-        'merge_output_format': 'mp4',  # Merge to MP4 if separate video/audio
     }
 
     # Add cookies if available (for age-restricted videos)
