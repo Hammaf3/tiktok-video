@@ -1,6 +1,7 @@
 # Railway/Render/Heroku configuration
 [phases.setup]
-aptPkgs = ["ffmpeg", "nodejs", "npm"]
+nixPkgs = ["python311", "nodejs", "gcc"]
+aptPkgs = ["ffmpeg"]
 
 [start]
 cmd = "gunicorn integrated_app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 300"
