@@ -147,6 +147,9 @@ def download_youtube_video(url: str) -> Dict[str, any]:
         # Merge video and audio into single file
         'merge_output_format': 'mp4',
 
+        # CRITICAL: Only download single video, not playlists
+        'noplaylist': True,
+
         # Logging for production debugging
         'quiet': False,
         'no_warnings': False,
@@ -176,16 +179,34 @@ def download_youtube_video(url: str) -> Dict[str, any]:
         },
     }
 
-    # If Node.js is found, explicitly tell yt-dlp where it is
+    # CRITICAL FIX: Ensure yt-dlp can find Node.js for JavaScript execution
     if nodejs_path:
-        # Some systems need explicit path
-        os.environ['NODE_PATH'] = os.path.dirname(nodejs_path)
-        logger.info(f"Set NODE_PATH to {os.path.dirname(nodejs_path)}")
+        # Add Node.js to PATH so yt-dlp can find it
+        current_path = os.environ.get('PATH', '')
+        node_dir = os.path.dirname(nodejs_path)
+        if node_dir not in current_path:
+            os.environ['PATH'] = f"{node_dir}:{current_path}"
+            logger.info(f"Added Node.js directory to PATH: {node_dir}")
 
-    # Add cookies if available (for age-restricted videos)
+        # Also set NODE_PATH
+        os.environ['NODE_PATH'] = node_dir
+        logger.info(f"Set NODE_PATH to {node_dir}")
+
+    # CRITICAL DECISION: Cookies vs Android Client
+    # Android client: No JS needed, but no cookie support (can't do age-restricted)
+    # Web client: Needs Node.js for JS challenges, but supports cookies
+
     if YOUTUBE_COOKIES_FILE.exists():
         ydl_opts['cookiefile'] = str(YOUTUBE_COOKIES_FILE)
         logger.info("Using YouTube cookies for authentication")
+
+        # CRITICAL: When cookies are used, Android client is skipped
+        # We MUST ensure Node.js is accessible for web client
+        if not nodejs_path:
+            logger.warning("Cookies enabled but Node.js not found - web client may fail")
+            logger.warning("Consider removing cookies to enable Android client")
+    else:
+        logger.info("No cookies - Android client will be preferred (no JS needed)")
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
