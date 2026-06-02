@@ -109,9 +109,40 @@ def download_youtube_video(url: str) -> Dict[str, any]:
 
     progress_bar = DownloadProgressBar()
 
-    # ABSOLUTE MINIMUM yt-dlp config - let it handle everything automatically
+    # PRODUCTION-SAFE yt-dlp configuration with format fallback chain
+    # Format strategy: Try best quality, fallback to universally available formats
     ydl_opts = {
         'outtmpl': str(DOWNLOAD_DIR / '%(title)s.%(ext)s'),
+
+        # CRITICAL: Explicit format selection with fallback chain
+        # This ensures compatibility across all environments including Railway
+        'format': (
+            # Try best video+audio merge (usually works)
+            'bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/'
+            # Fallback: best combined format
+            'best[ext=mp4]/best'
+        ),
+
+        # Merge video and audio into single file
+        'merge_output_format': 'mp4',
+
+        # Logging for production debugging
+        'quiet': False,
+        'no_warnings': False,
+        'verbose': True,
+
+        # Retry strategy for cloud environments
+        'retries': 3,
+        'fragment_retries': 3,
+
+        # HTTP headers to appear as regular browser
+        'http_headers': {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'en-us,en;q=0.5',
+            'Accept-Encoding': 'gzip, deflate',
+            'Connection': 'keep-alive',
+        },
     }
 
     # Add cookies if available (for age-restricted videos)
@@ -139,11 +170,28 @@ def download_youtube_video(url: str) -> Dict[str, any]:
             logger.info(f"Video: {title}")
             logger.info(f"Duration: {duration}s")
 
-            # Log available formats for debugging
+            # Log available formats for debugging (PRODUCTION LOGGING)
             if 'formats' in info:
                 print(f"📋 Available formats: {len(info['formats'])} formats found")
-                for fmt in info['formats'][:5]:  # Show first 5 formats
-                    print(f"  - Format {fmt.get('format_id')}: {fmt.get('ext')} {fmt.get('resolution', 'audio')}")
+                logger.info(f"Total formats available: {len(info['formats'])}")
+
+                # Log first 10 formats with detailed info
+                for i, fmt in enumerate(info['formats'][:10]):
+                    format_info = (
+                        f"Format {fmt.get('format_id', 'N/A')}: "
+                        f"{fmt.get('ext', 'N/A')} "
+                        f"{fmt.get('resolution', fmt.get('quality', 'audio only'))} "
+                        f"[vcodec: {fmt.get('vcodec', 'none')}, "
+                        f"acodec: {fmt.get('acodec', 'none')}] "
+                        f"{fmt.get('filesize', 0) / 1024 / 1024:.1f}MB"
+                    )
+                    print(f"  {i+1}. {format_info}")
+                    logger.debug(format_info)
+
+                # Log the format that will be selected
+                selected_format = info.get('format_id', 'auto')
+                print(f"✓ Selected format: {selected_format}")
+                logger.info(f"Selected format ID: {selected_format}")
 
             # Download the video
             logger.debug("Starting download...")
@@ -188,14 +236,30 @@ def download_youtube_video(url: str) -> Dict[str, any]:
     except yt_dlp.utils.DownloadError as e:
         error_msg = str(e).lower()
 
-        # Show actual error for debugging
-        print(f"🔴 yt-dlp error: {str(e)}")
+        # Show actual error for debugging (PRODUCTION LOGGING)
+        print(f"🔴 yt-dlp DownloadError: {str(e)}")
+        logger.error(f"yt-dlp DownloadError: {str(e)}")
 
-        if 'private video' in error_msg:
+        # ENHANCED ERROR DETECTION FOR FORMAT ISSUES
+        if 'format' in error_msg and ('not available' in error_msg or 'unavailable' in error_msg):
+            # This is the critical error that happens on Railway
+            logger.error("FORMAT ERROR DETECTED - This usually happens on cloud IPs")
+            logger.error("YouTube may be restricting format availability from datacenter IPs")
+
+            # Provide detailed diagnostic info
+            print(f"❌ FORMAT ERROR: YouTube restricted format availability")
+            print(f"   This typically happens on cloud platforms (Railway, Heroku, etc.)")
+            print(f"   The requested video+audio format combination is not available")
+            print(f"   Recommendation: Ensure format fallback chain is configured")
+
+            raise Exception(
+                "Format error: YouTube restricted format availability from this IP. "
+                "This video format is not available on cloud platforms. "
+                "Error details: " + str(e)
+            )
+
+        elif 'private video' in error_msg:
             raise Exception("This video is private and cannot be downloaded.")
-        elif 'format' in error_msg and 'not available' in error_msg:
-            # Format error - show actual message for debugging
-            raise Exception(f"Format error: {str(e)}")
         elif 'video unavailable' in error_msg:
             raise Exception("Video unavailable. It may be deleted, private, or region-locked. Please try a different video.")
         elif 'sign in' in error_msg or 'age' in error_msg:
@@ -207,7 +271,7 @@ def download_youtube_video(url: str) -> Dict[str, any]:
         elif 'members-only' in error_msg or 'membership' in error_msg:
             raise Exception("This is a members-only video. Please try a different video.")
         else:
-            # Show actual error message
+            # Show actual error message with context
             raise Exception(f"Download failed: {str(e)}")
 
     except Exception as e:
