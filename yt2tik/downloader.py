@@ -109,6 +109,27 @@ def download_youtube_video(url: str) -> Dict[str, any]:
 
     progress_bar = DownloadProgressBar()
 
+    # CRITICAL: Check Node.js availability for YouTube signature/n-challenge solving
+    import shutil
+    import subprocess
+
+    nodejs_path = shutil.which('node') or shutil.which('nodejs')
+    if nodejs_path:
+        try:
+            result = subprocess.run([nodejs_path, '--version'],
+                                  capture_output=True, text=True, timeout=5)
+            node_version = result.stdout.strip()
+            print(f"✅ Node.js found: {nodejs_path} ({node_version})")
+            logger.info(f"Node.js available at {nodejs_path} version {node_version}")
+        except Exception as e:
+            print(f"⚠️ Node.js found but version check failed: {e}")
+            logger.warning(f"Node.js check failed: {e}")
+    else:
+        print(f"❌ WARNING: Node.js NOT found in PATH")
+        print(f"   YouTube signature/n-challenge solving will FAIL")
+        print(f"   This will cause 'Only images are available' error")
+        logger.error("Node.js not found - YouTube downloads will likely fail")
+
     # PRODUCTION-SAFE yt-dlp configuration with format fallback chain
     # Format strategy: Try best quality, fallback to universally available formats
     ydl_opts = {
@@ -143,7 +164,23 @@ def download_youtube_video(url: str) -> Dict[str, any]:
             'Accept-Encoding': 'gzip, deflate',
             'Connection': 'keep-alive',
         },
+
+        # CRITICAL FIX: Extractor arguments for YouTube challenge solving
+        # This helps yt-dlp solve signature and n-parameter challenges
+        'extractor_args': {
+            'youtube': {
+                'player_client': ['android', 'web'],  # Try multiple clients
+                'player_skip': ['webpage', 'configs'],  # Skip unnecessary steps
+                'skip': ['hls', 'dash'],  # Focus on direct formats
+            }
+        },
     }
+
+    # If Node.js is found, explicitly tell yt-dlp where it is
+    if nodejs_path:
+        # Some systems need explicit path
+        os.environ['NODE_PATH'] = os.path.dirname(nodejs_path)
+        logger.info(f"Set NODE_PATH to {os.path.dirname(nodejs_path)}")
 
     # Add cookies if available (for age-restricted videos)
     if YOUTUBE_COOKIES_FILE.exists():
@@ -175,6 +212,16 @@ def download_youtube_video(url: str) -> Dict[str, any]:
                 print(f"📋 Available formats: {len(info['formats'])} formats found")
                 logger.info(f"Total formats available: {len(info['formats'])}")
 
+                # CRITICAL: Check if we only have image formats (signature failure indicator)
+                video_formats = [f for f in info['formats'] if f.get('vcodec') != 'none' and 'image' not in f.get('format_note', '').lower()]
+                if len(video_formats) == 0:
+                    print(f"❌ CRITICAL: No video formats available - only images/thumbnails")
+                    print(f"   This indicates YouTube signature/n-challenge solving FAILED")
+                    print(f"   Node.js is likely not available or not working properly")
+                    logger.error("No video formats available - signature solving failed")
+                else:
+                    print(f"✓ Video formats available: {len(video_formats)}")
+
                 # Log first 10 formats with detailed info
                 for i, fmt in enumerate(info['formats'][:10]):
                     format_info = (
@@ -192,6 +239,9 @@ def download_youtube_video(url: str) -> Dict[str, any]:
                 selected_format = info.get('format_id', 'auto')
                 print(f"✓ Selected format: {selected_format}")
                 logger.info(f"Selected format ID: {selected_format}")
+            else:
+                print(f"❌ CRITICAL: No formats field in video info")
+                logger.error("No formats field returned by yt-dlp")
 
             # Download the video
             logger.debug("Starting download...")
