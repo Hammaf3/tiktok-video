@@ -227,36 +227,41 @@ def download_youtube_video(url: str) -> Dict[str, any]:
         logger.info("✅ Android client bypasses JavaScript challenges")
         logger.info("✅ This provides maximum reliability on cloud platforms")
 
+    # CRITICAL FIX: Override yt-dlp 2026.3.17 default js_runtimes
+    # yt-dlp 2026.3.17 hardcoded default: js_runtimes = {'deno': {}}
+    # This EXCLUDES Node.js from the whitelist, causing signature solving to fail
+    # We must explicitly override to enable Node.js
+    if nodejs_path:
+        # Node.js available - configure yt-dlp to use it
+        # Note: Only 'node' is valid, not 'nodejs' (yt-dlp will warn about invalid names)
+        ydl_opts['js_runtimes'] = {'node': {}}
+        print(f"✅ OVERRIDE: js_runtimes set to Node.js (overriding Deno default)")
+        logger.info("Overriding yt-dlp default: using Node.js instead of Deno")
+    else:
+        # No Node.js - set empty dict to disable whitelist and allow Android client
+        ydl_opts['js_runtimes'] = {}
+        print(f"⚠️  Node.js not found - disabling js_runtimes whitelist")
+        logger.warning("Node.js not found - relying on Android client")
+
     # VERIFICATION: Log final configuration before passing to yt-dlp
     print(f"\n{'='*60}")
     print(f"🔍 YT-DLP CONFIGURATION VERIFICATION")
     print(f"{'='*60}")
 
-    # Check if yt-dlp package has corrupted defaults
+    # Check if yt-dlp package has the Deno default
     try:
         from yt_dlp import YoutubeDL
         test_ydl = YoutubeDL({})
         if 'js_runtimes' in test_ydl.params:
-            print(f"⚠️  WARNING: yt-dlp PACKAGE DEFAULTS contain js_runtimes!")
-            print(f"   Package default: {test_ydl.params['js_runtimes']}")
-            print(f"   Package location: {yt_dlp.__file__}")
-            logger.error(f"yt-dlp package defaults corrupted: {test_ydl.params['js_runtimes']}")
+            print(f"ℹ️  yt-dlp package default: {test_ydl.params['js_runtimes']}")
+            print(f"   (This is normal for yt-dlp 2026.3.17+)")
+            logger.info(f"yt-dlp package default js_runtimes: {test_ydl.params['js_runtimes']}")
     except Exception as e:
         logger.warning(f"Could not check yt-dlp defaults: {e}")
 
-    # Check our ydl_opts
-    print(f"js_runtimes in config: {'js_runtimes' in ydl_opts}")
-    if 'js_runtimes' in ydl_opts:
-        print(f"❌ WARNING: js_runtimes is SET to: {ydl_opts['js_runtimes']}")
-        print(f"❌ THIS SHOULD NOT BE PRESENT - indicates external config!")
-        print(f"❌ REMOVING js_runtimes forcefully!")
-        logger.error(f"js_runtimes found in config: {ydl_opts['js_runtimes']}")
-        logger.error("Removing js_runtimes to allow Node.js auto-detection")
-        del ydl_opts['js_runtimes']
-        print(f"✅ js_runtimes REMOVED - yt-dlp will now auto-detect Node.js")
-    else:
-        print(f"✅ js_runtimes NOT set (correct - yt-dlp will auto-detect)")
-        logger.info("js_runtimes not in config - auto-detection enabled")
+    # Show our override
+    print(f"✅ Our js_runtimes override: {ydl_opts.get('js_runtimes', 'NOT SET')}")
+    logger.info(f"Final js_runtimes config: {ydl_opts.get('js_runtimes', 'NOT SET')}")
 
     print(f"cookiefile in config: {'cookiefile' in ydl_opts}")
     if 'cookiefile' in ydl_opts:
