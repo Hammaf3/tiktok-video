@@ -192,6 +192,16 @@ def download_youtube_video(url: str) -> Dict[str, any]:
         os.environ['NODE_PATH'] = node_dir
         logger.info(f"Set NODE_PATH to {node_dir}")
 
+        # DEBUG: Print full PATH for verification
+        print(f"🔍 DEBUG: Full PATH = {os.environ.get('PATH')[:200]}...")
+        print(f"🔍 DEBUG: NODE_PATH = {os.environ.get('NODE_PATH')}")
+
+        # DEBUG: Test if yt-dlp can find node
+        import shutil
+        print(f"🔍 DEBUG: which('node') = {shutil.which('node')}")
+        print(f"🔍 DEBUG: which('nodejs') = {shutil.which('nodejs')}")
+        print(f"🔍 DEBUG: which('deno') = {shutil.which('deno')}")
+
     # CRITICAL DECISION: Cookies vs Android Client
     # Android client: No JS needed, but no cookie support (can't do age-restricted)
     # Web client: Needs Node.js for JS challenges, but supports cookies
