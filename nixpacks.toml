@@ -10,6 +10,9 @@ nodeVersion = "18"
 [phases.install]
 cmds = [
     "python -m venv --copies /opt/venv",
+    # Clear any Python cache from previous deployments
+    "find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true",
+    "find . -type f -name '*.pyc' -delete 2>/dev/null || true",
     "pip install -r requirements.txt",
     # Verify Node.js is accessible
     "which node || which nodejs",
