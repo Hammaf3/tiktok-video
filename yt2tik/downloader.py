@@ -231,11 +231,29 @@ def download_youtube_video(url: str) -> Dict[str, any]:
     print(f"\n{'='*60}")
     print(f"🔍 YT-DLP CONFIGURATION VERIFICATION")
     print(f"{'='*60}")
+
+    # Check if yt-dlp package has corrupted defaults
+    try:
+        from yt_dlp import YoutubeDL
+        test_ydl = YoutubeDL({})
+        if 'js_runtimes' in test_ydl.params:
+            print(f"⚠️  WARNING: yt-dlp PACKAGE DEFAULTS contain js_runtimes!")
+            print(f"   Package default: {test_ydl.params['js_runtimes']}")
+            print(f"   Package location: {yt_dlp.__file__}")
+            logger.error(f"yt-dlp package defaults corrupted: {test_ydl.params['js_runtimes']}")
+    except Exception as e:
+        logger.warning(f"Could not check yt-dlp defaults: {e}")
+
+    # Check our ydl_opts
     print(f"js_runtimes in config: {'js_runtimes' in ydl_opts}")
     if 'js_runtimes' in ydl_opts:
         print(f"❌ WARNING: js_runtimes is SET to: {ydl_opts['js_runtimes']}")
         print(f"❌ THIS SHOULD NOT BE PRESENT - indicates external config!")
+        print(f"❌ REMOVING js_runtimes forcefully!")
         logger.error(f"js_runtimes found in config: {ydl_opts['js_runtimes']}")
+        logger.error("Removing js_runtimes to allow Node.js auto-detection")
+        del ydl_opts['js_runtimes']
+        print(f"✅ js_runtimes REMOVED - yt-dlp will now auto-detect Node.js")
     else:
         print(f"✅ js_runtimes NOT set (correct - yt-dlp will auto-detect)")
         logger.info("js_runtimes not in config - auto-detection enabled")
