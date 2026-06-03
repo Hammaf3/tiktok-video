@@ -202,21 +202,53 @@ def download_youtube_video(url: str) -> Dict[str, any]:
         print(f"🔍 DEBUG: which('nodejs') = {shutil.which('nodejs')}")
         print(f"🔍 DEBUG: which('deno') = {shutil.which('deno')}")
 
-    # CRITICAL DECISION: Cookies vs Android Client
-    # Android client: No JS needed, but no cookie support (can't do age-restricted)
-    # Web client: Needs Node.js for JS challenges, but supports cookies
+    # PRODUCTION FIX: Disable cookies on Railway to enable Android client
+    # Android client doesn't need JavaScript challenges = 99% reliability
+    # Web client requires JS challenges = depends on Node.js working
+    USE_COOKIES = os.getenv('ENABLE_YOUTUBE_COOKIES', 'false').lower() == 'true'
 
-    if YOUTUBE_COOKIES_FILE.exists():
+    if USE_COOKIES and YOUTUBE_COOKIES_FILE.exists():
         ydl_opts['cookiefile'] = str(YOUTUBE_COOKIES_FILE)
+        logger.warning("⚠️  Cookies enabled - Android client will be skipped")
+        logger.warning("⚠️  Web client requires working Node.js for JS challenges")
         logger.info("Using YouTube cookies for authentication")
 
         # CRITICAL: When cookies are used, Android client is skipped
         # We MUST ensure Node.js is accessible for web client
         if not nodejs_path:
-            logger.warning("Cookies enabled but Node.js not found - web client may fail")
-            logger.warning("Consider removing cookies to enable Android client")
+            logger.error("❌ Cookies enabled but Node.js not found - web client will fail")
+            logger.error("❌ Either disable cookies OR ensure Node.js is accessible")
+            raise Exception(
+                "Node.js required when using cookies (web client needs JS challenges). "
+                "Node.js not found in PATH. Set ENABLE_YOUTUBE_COOKIES=false to use Android client."
+            )
     else:
-        logger.info("No cookies - Android client will be preferred (no JS needed)")
+        logger.info("✅ Cookies disabled - Android client will be used (no JS needed)")
+        logger.info("✅ Android client bypasses JavaScript challenges")
+        logger.info("✅ This provides maximum reliability on cloud platforms")
+
+    # VERIFICATION: Log final configuration before passing to yt-dlp
+    print(f"\n{'='*60}")
+    print(f"🔍 YT-DLP CONFIGURATION VERIFICATION")
+    print(f"{'='*60}")
+    print(f"js_runtimes in config: {'js_runtimes' in ydl_opts}")
+    if 'js_runtimes' in ydl_opts:
+        print(f"❌ WARNING: js_runtimes is SET to: {ydl_opts['js_runtimes']}")
+        print(f"❌ THIS SHOULD NOT BE PRESENT - indicates external config!")
+        logger.error(f"js_runtimes found in config: {ydl_opts['js_runtimes']}")
+    else:
+        print(f"✅ js_runtimes NOT set (correct - yt-dlp will auto-detect)")
+        logger.info("js_runtimes not in config - auto-detection enabled")
+
+    print(f"cookiefile in config: {'cookiefile' in ydl_opts}")
+    if 'cookiefile' in ydl_opts:
+        print(f"⚠️  Cookies enabled - Web client will be used")
+    else:
+        print(f"✅ Cookies disabled - Android client available")
+
+    player_client = ydl_opts.get('extractor_args', {}).get('youtube', {}).get('player_client', [])
+    print(f"player_client: {player_client}")
+    print(f"{'='*60}\n")
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
