@@ -13,12 +13,18 @@ cmds = [
     # Clear any Python cache from previous deployments
     "find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true",
     "find . -type f -name '*.pyc' -delete 2>/dev/null || true",
+    # CRITICAL: Remove any yt-dlp config files that might contain js_runtimes
+    "rm -f ~/.config/yt-dlp/config ~/.config/yt-dlp/config.txt ~/.yt-dlp.conf ~/.yt-dlp/config /etc/yt-dlp.conf 2>/dev/null || true",
+    "rm -rf ~/.config/yt-dlp ~/.yt-dlp /etc/yt-dlp 2>/dev/null || true",
     "pip install -r requirements.txt",
     # Verify Node.js is accessible
     "which node || which nodejs",
     "node --version || nodejs --version",
     # Verify yt-dlp version
-    "pip show yt-dlp"
+    "pip show yt-dlp",
+    # Verify no yt-dlp configs remain
+    "echo 'Checking for yt-dlp config files...'",
+    "find /root -name 'yt-dlp*' -o -name '.yt-dlp*' 2>/dev/null || echo 'No yt-dlp config files found'"
 ]
 
 [start]
