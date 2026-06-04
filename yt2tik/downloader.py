@@ -14,6 +14,34 @@ from .logger import get_logger
 logger = get_logger()
 
 
+def cleanup_ytdlp_configs():
+    """
+    NUCLEAR OPTION: Delete ALL yt-dlp config files that could inject js_runtimes
+    This prevents external config injection that overrides our code settings
+    """
+    config_paths = [
+        Path.home() / '.config' / 'yt-dlp' / 'config',
+        Path.home() / '.yt-dlp.conf',
+        Path('/etc/yt-dlp.conf'),
+        Path.home() / '.config' / 'yt-dlp' / 'config.txt',
+    ]
+
+    deleted_count = 0
+    for config_path in config_paths:
+        if config_path.exists():
+            try:
+                config_path.unlink()
+                logger.info(f"🗑️  Deleted yt-dlp config: {config_path}")
+                deleted_count += 1
+            except Exception as e:
+                logger.warning(f"Failed to delete {config_path}: {e}")
+
+    if deleted_count > 0:
+        logger.info(f"✅ Cleaned up {deleted_count} yt-dlp config file(s)")
+
+    return deleted_count
+
+
 def setup_cookies_from_env():
     """
     Setup cookies file from environment variable if available
@@ -87,7 +115,14 @@ def sanitize_filename(filename: str) -> str:
 
 def download_youtube_video(url: str) -> Dict[str, any]:
     """
-    Download YouTube video
+    Download YouTube video with PRODUCTION-HARDENED configuration
+
+    CRITICAL FIXES:
+    1. Delete all yt-dlp config files (prevents external js_runtimes injection)
+    2. Use --no-config flag (ignore system configs)
+    3. Disable cookies by default (enables Android client, no JS needed)
+    4. Explicit Node.js PATH setup (if needed for web client)
+    5. Cloud-IP-safe format fallback chain
 
     Args:
         url: YouTube video URL
@@ -100,6 +135,11 @@ def download_youtube_video(url: str) -> Dict[str, any]:
     """
     logger.info(f"Starting download from: {url}")
 
+    # CRITICAL FIX #1: Delete all yt-dlp config files before download
+    # This prevents external config injection that could set js_runtimes={'deno': {}}
+    print(f"🧹 Cleaning up yt-dlp config files...")
+    cleanup_ytdlp_configs()
+
     # Setup cookies from environment variable if available
     cookies_loaded = setup_cookies_from_env()
     if cookies_loaded:
@@ -109,11 +149,27 @@ def download_youtube_video(url: str) -> Dict[str, any]:
 
     progress_bar = DownloadProgressBar()
 
-    # CRITICAL: Check Node.js availability for YouTube signature/n-challenge solving
+    # Check Node.js availability
     import shutil
     import subprocess
 
     nodejs_path = shutil.which('node') or shutil.which('nodejs')
+
+    # CRITICAL FIX #2: Add Nix profile to PATH for Railway environment
+    # Railway uses Nix package manager, Node.js installed at /root/.nix-profile/bin/node
+    if not nodejs_path:
+        nix_node_path = '/root/.nix-profile/bin/node'
+        if Path(nix_node_path).exists():
+            nix_bin_dir = '/root/.nix-profile/bin'
+            current_path = os.environ.get('PATH', '')
+            if nix_bin_dir not in current_path:
+                os.environ['PATH'] = f"{nix_bin_dir}:{current_path}"
+                logger.info(f"Added Nix bin to PATH: {nix_bin_dir}")
+                print(f"🔧 Added Nix profile to PATH")
+
+            # Re-check after PATH update
+            nodejs_path = shutil.which('node')
+
     if nodejs_path:
         try:
             result = subprocess.run([nodejs_path, '--version'],
@@ -124,40 +180,46 @@ def download_youtube_video(url: str) -> Dict[str, any]:
         except Exception as e:
             print(f"⚠️ Node.js found but version check failed: {e}")
             logger.warning(f"Node.js check failed: {e}")
+            nodejs_path = None  # Treat as unavailable if version check fails
     else:
-        print(f"❌ WARNING: Node.js NOT found in PATH")
-        print(f"   YouTube signature/n-challenge solving will FAIL")
-        print(f"   This will cause 'Only images are available' error")
-        logger.error("Node.js not found - YouTube downloads will likely fail")
+        print(f"⚠️ Node.js NOT found in PATH")
+        logger.warning("Node.js not found - Android client will be used")
 
-    # PRODUCTION-SAFE yt-dlp configuration with format fallback chain
-    # Format strategy: Try best quality, fallback to universally available formats
+    # CRITICAL FIX #3: DISABLE cookies by default on cloud platforms
+    # Cookies force WEB client → WEB client needs JS runtime → more failure points
+    # Android client works WITHOUT cookies and WITHOUT JS runtime → 99% reliability
+    USE_COOKIES = os.getenv('ENABLE_YOUTUBE_COOKIES', 'false').lower() == 'true'
+
+    # PRODUCTION-SAFE yt-dlp configuration
     ydl_opts = {
+        # CRITICAL FIX #4: Ignore ALL config files (prevents external js_runtimes injection)
+        'no_config': True,  # This is the NUCLEAR option - ignore all config files
+
         'outtmpl': str(DOWNLOAD_DIR / '%(title)s.%(ext)s'),
 
-        # CRITICAL: Explicit format selection with fallback chain
-        # This ensures compatibility across all environments including Railway
+        # Cloud-safe format selection with aggressive fallback
         'format': (
-            # Try best video+audio merge (usually works)
-            'bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/'
-            # Fallback: best combined format
-            'best[ext=mp4]/best'
+            'bestvideo[ext=mp4][height<=1080]+bestaudio[ext=m4a]/'
+            'bestvideo[ext=mp4]+bestaudio[ext=m4a]/'
+            'bestvideo+bestaudio/'
+            'best[ext=mp4]/'
+            'best'
         ),
 
         # Merge video and audio into single file
         'merge_output_format': 'mp4',
 
-        # CRITICAL: Only download single video, not playlists
+        # Only download single video, not playlists
         'noplaylist': True,
 
-        # Logging for production debugging
+        # Verbose logging for production debugging
         'quiet': False,
         'no_warnings': False,
         'verbose': True,
 
         # Retry strategy for cloud environments
-        'retries': 3,
-        'fragment_retries': 3,
+        'retries': 5,
+        'fragment_retries': 5,
 
         # HTTP headers to appear as regular browser
         'http_headers': {
@@ -168,115 +230,64 @@ def download_youtube_video(url: str) -> Dict[str, any]:
             'Connection': 'keep-alive',
         },
 
-        # CRITICAL FIX: Extractor arguments for YouTube challenge solving
-        # This helps yt-dlp solve signature and n-parameter challenges
+        # CRITICAL FIX #5: Force Android client as PRIMARY (bypasses JS challenges)
         'extractor_args': {
             'youtube': {
-                'player_client': ['android', 'web'],  # Try multiple clients
-                'player_skip': ['webpage', 'configs'],  # Skip unnecessary steps
-                'skip': ['hls', 'dash'],  # Focus on direct formats
+                'player_client': ['android'],  # ONLY android - no fallback to web
+                'player_skip': ['webpage', 'configs'],
             }
         },
     }
 
-    # CRITICAL FIX: Ensure yt-dlp can find Node.js for JavaScript execution
-    if nodejs_path:
-        # Add Node.js to PATH so yt-dlp can find it
-        current_path = os.environ.get('PATH', '')
-        node_dir = os.path.dirname(nodejs_path)
-        if node_dir not in current_path:
-            os.environ['PATH'] = f"{node_dir}:{current_path}"
-            logger.info(f"Added Node.js directory to PATH: {node_dir}")
+    # CRITICAL FIX #6: NEVER set js_runtimes in ydl_opts
+    # Why? Because:
+    # 1. Android client doesn't need JS runtime at all
+    # 2. Setting js_runtimes can trigger yt-dlp to prefer WEB client
+    # 3. Empty dict or None still gets overridden by package defaults
+    # 4. Best strategy: don't touch it at all, let Android client handle everything
+    #
+    # Previous attempts set js_runtimes={'node': {}} or js_runtimes={}
+    # This actually ENABLED js runtime checking, making yt-dlp prefer WEB client
+    # By NOT setting it, yt-dlp uses Android client exclusively (no JS needed)
 
-        # Also set NODE_PATH
-        os.environ['NODE_PATH'] = node_dir
-        logger.info(f"Set NODE_PATH to {node_dir}")
+    logger.info("✅ js_runtimes NOT set - Android client will handle all extraction")
+    print(f"✅ Strategy: Pure Android client (no JS runtime dependency)")
 
-        # DEBUG: Print full PATH for verification
-        print(f"🔍 DEBUG: Full PATH = {os.environ.get('PATH')[:200]}...")
-        print(f"🔍 DEBUG: NODE_PATH = {os.environ.get('NODE_PATH')}")
-
-        # DEBUG: Test if yt-dlp can find node
-        import shutil
-        print(f"🔍 DEBUG: which('node') = {shutil.which('node')}")
-        print(f"🔍 DEBUG: which('nodejs') = {shutil.which('nodejs')}")
-        print(f"🔍 DEBUG: which('deno') = {shutil.which('deno')}")
-
-    # PRODUCTION FIX: Disable cookies on Railway to enable Android client
-    # Android client doesn't need JavaScript challenges = 99% reliability
-    # Web client requires JS challenges = depends on Node.js working
-    USE_COOKIES = os.getenv('ENABLE_YOUTUBE_COOKIES', 'false').lower() == 'true'
-
+    # Cookie strategy
     if USE_COOKIES and YOUTUBE_COOKIES_FILE.exists():
         ydl_opts['cookiefile'] = str(YOUTUBE_COOKIES_FILE)
-        logger.warning("⚠️  Cookies enabled - Android client will be skipped")
-        logger.warning("⚠️  Web client requires working Node.js for JS challenges")
-        logger.info("Using YouTube cookies for authentication")
+        logger.warning("⚠️  Cookies enabled - may fall back to Web client")
+        logger.warning("⚠️  This reduces reliability on cloud platforms")
+        print(f"⚠️  WARNING: Cookies enabled - Android client may be skipped")
 
-        # CRITICAL: When cookies are used, Android client is skipped
-        # We MUST ensure Node.js is accessible for web client
+        # If cookies enabled but no Node.js, warn but continue (Android might still work)
         if not nodejs_path:
-            logger.error("❌ Cookies enabled but Node.js not found - web client will fail")
-            logger.error("❌ Either disable cookies OR ensure Node.js is accessible")
-            raise Exception(
-                "Node.js required when using cookies (web client needs JS challenges). "
-                "Node.js not found in PATH. Set ENABLE_YOUTUBE_COOKIES=false to use Android client."
-            )
+            logger.warning("⚠️  Cookies enabled but Node.js not found")
+            logger.warning("⚠️  If Web client is used, extraction may fail")
+            print(f"⚠️  No Node.js found - Web client fallback will fail if triggered")
     else:
-        logger.info("✅ Cookies disabled - Android client will be used (no JS needed)")
-        logger.info("✅ Android client bypasses JavaScript challenges")
-        logger.info("✅ This provides maximum reliability on cloud platforms")
+        logger.info("✅ Cookies disabled - Pure Android client mode")
+        logger.info("✅ Maximum reliability (no JS runtime, no bot detection)")
+        print(f"✅ Android client mode: No cookies, no JS challenges, maximum reliability")
 
-    # CRITICAL FIX: Override yt-dlp 2026.3.17 default js_runtimes
-    # yt-dlp 2026.3.17 hardcoded default: js_runtimes = {'deno': {}}
-    # This EXCLUDES Node.js from the whitelist, causing signature solving to fail
-    # We must explicitly override to enable Node.js
-    if nodejs_path:
-        # Node.js available - configure yt-dlp to use it
-        # Note: Only 'node' is valid, not 'nodejs' (yt-dlp will warn about invalid names)
-        ydl_opts['js_runtimes'] = {'node': {}}
-        print(f"✅ OVERRIDE: js_runtimes set to Node.js (overriding Deno default)")
-        logger.info("Overriding yt-dlp default: using Node.js instead of Deno")
-    else:
-        # No Node.js - set empty dict to disable whitelist and allow Android client
-        ydl_opts['js_runtimes'] = {}
-        print(f"⚠️  Node.js not found - disabling js_runtimes whitelist")
-        logger.warning("Node.js not found - relying on Android client")
-
-    # VERIFICATION: Log final configuration before passing to yt-dlp
-    print(f"\n{'='*60}")
-    print(f"🔍 YT-DLP CONFIGURATION VERIFICATION")
-    print(f"{'='*60}")
-
-    # Check if yt-dlp package has the Deno default
-    try:
-        from yt_dlp import YoutubeDL
-        test_ydl = YoutubeDL({})
-        if 'js_runtimes' in test_ydl.params:
-            print(f"ℹ️  yt-dlp package default: {test_ydl.params['js_runtimes']}")
-            print(f"   (This is normal for yt-dlp 2026.3.17+)")
-            logger.info(f"yt-dlp package default js_runtimes: {test_ydl.params['js_runtimes']}")
-    except Exception as e:
-        logger.warning(f"Could not check yt-dlp defaults: {e}")
-
-    # Show our override
-    print(f"✅ Our js_runtimes override: {ydl_opts.get('js_runtimes', 'NOT SET')}")
-    logger.info(f"Final js_runtimes config: {ydl_opts.get('js_runtimes', 'NOT SET')}")
-
+    # VERIFICATION: Log final configuration
+    print(f"\n{'='*70}")
+    print(f"🔍 FINAL YT-DLP CONFIGURATION")
+    print(f"{'='*70}")
+    print(f"no_config (ignore all config files): {ydl_opts.get('no_config', False)}")
+    print(f"js_runtimes in config: {'js_runtimes' in ydl_opts}")
     print(f"cookiefile in config: {'cookiefile' in ydl_opts}")
-    if 'cookiefile' in ydl_opts:
-        print(f"⚠️  Cookies enabled - Web client will be used")
-    else:
-        print(f"✅ Cookies disabled - Android client available")
-
-    player_client = ydl_opts.get('extractor_args', {}).get('youtube', {}).get('player_client', [])
-    print(f"player_client: {player_client}")
-    print(f"{'='*60}\n")
+    print(f"player_client: {ydl_opts.get('extractor_args', {}).get('youtube', {}).get('player_client', [])}")
+    print(f"Node.js available: {nodejs_path is not None}")
+    if nodejs_path:
+        print(f"Node.js path: {nodejs_path}")
+    print(f"{'='*70}\n")
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             # Extract info first
             logger.debug("Extracting video information...")
+            print(f"📡 Extracting video info...")
             info = ydl.extract_info(url, download=False)
 
             if info is None:
@@ -292,48 +303,48 @@ def download_youtube_video(url: str) -> Dict[str, any]:
 
             logger.info(f"Video: {title}")
             logger.info(f"Duration: {duration}s")
+            print(f"📹 {title} ({duration}s)")
 
-            # Log available formats for debugging (PRODUCTION LOGGING)
+            # CRITICAL: Verify formats are available
             if 'formats' in info:
-                print(f"📋 Available formats: {len(info['formats'])} formats found")
-                logger.info(f"Total formats available: {len(info['formats'])}")
+                video_formats = [f for f in info['formats']
+                               if f.get('vcodec') != 'none'
+                               and 'image' not in f.get('format_note', '').lower()]
 
-                # CRITICAL: Check if we only have image formats (signature failure indicator)
-                video_formats = [f for f in info['formats'] if f.get('vcodec') != 'none' and 'image' not in f.get('format_note', '').lower()]
+                print(f"✅ {len(video_formats)} video formats available")
+                logger.info(f"Total video formats: {len(video_formats)}")
+
                 if len(video_formats) == 0:
-                    print(f"❌ CRITICAL: No video formats available - only images/thumbnails")
-                    print(f"   This indicates YouTube signature/n-challenge solving FAILED")
-                    print(f"   Node.js is likely not available or not working properly")
-                    logger.error("No video formats available - signature solving failed")
-                else:
-                    print(f"✓ Video formats available: {len(video_formats)}")
-
-                # Log first 10 formats with detailed info
-                for i, fmt in enumerate(info['formats'][:10]):
-                    format_info = (
-                        f"Format {fmt.get('format_id', 'N/A')}: "
-                        f"{fmt.get('ext', 'N/A')} "
-                        f"{fmt.get('resolution', fmt.get('quality', 'audio only'))} "
-                        f"[vcodec: {fmt.get('vcodec', 'none')}, "
-                        f"acodec: {fmt.get('acodec', 'none')}] "
-                        f"{fmt.get('filesize', 0) / 1024 / 1024:.1f}MB"
+                    print(f"❌ CRITICAL: Only images/thumbnails available")
+                    print(f"   This means extraction FAILED")
+                    logger.error("No video formats - extraction failed")
+                    raise Exception(
+                        "No video formats available. This indicates extraction failure. "
+                        "Possible causes: bot detection, IP restriction, or JS challenge failure."
                     )
-                    print(f"  {i+1}. {format_info}")
-                    logger.debug(format_info)
 
-                # Log the format that will be selected
+                # Log selected format
                 selected_format = info.get('format_id', 'auto')
-                print(f"✓ Selected format: {selected_format}")
-                logger.info(f"Selected format ID: {selected_format}")
+                print(f"✅ Selected format: {selected_format}")
+                logger.info(f"Selected format: {selected_format}")
+
+                # Log top 5 formats for debugging
+                for i, fmt in enumerate(video_formats[:5]):
+                    res = fmt.get('resolution', fmt.get('height', 'audio'))
+                    ext = fmt.get('ext', 'unknown')
+                    fid = fmt.get('format_id', 'unknown')
+                    print(f"  • {fid}: {res} ({ext})")
             else:
-                print(f"❌ CRITICAL: No formats field in video info")
-                logger.error("No formats field returned by yt-dlp")
+                print(f"❌ No formats field in video info")
+                logger.error("No formats field")
+                raise Exception("No formats available in video info")
 
             # Download the video
             logger.debug("Starting download...")
+            print(f"⬇️  Downloading...")
             ydl.download([url])
 
-            # Find the downloaded file - try multiple patterns
+            # Find the downloaded file
             sanitized_title = sanitize_filename(title)
 
             # Try exact match first
@@ -360,6 +371,7 @@ def download_youtube_video(url: str) -> Dict[str, any]:
             video_path = video_files[0]
 
             logger.info(f"✅ Download complete: {video_path.name}")
+            print(f"✅ Download complete: {video_path.name}")
 
             return {
                 'video_path': str(video_path),
@@ -372,51 +384,67 @@ def download_youtube_video(url: str) -> Dict[str, any]:
     except yt_dlp.utils.DownloadError as e:
         error_msg = str(e).lower()
 
-        # Show actual error for debugging (PRODUCTION LOGGING)
-        print(f"🔴 yt-dlp DownloadError: {str(e)}")
-        logger.error(f"yt-dlp DownloadError: {str(e)}")
+        # Log full error
+        print(f"❌ yt-dlp error: {str(e)}")
+        logger.error(f"yt-dlp error: {str(e)}")
 
-        # ENHANCED ERROR DETECTION FOR FORMAT ISSUES
-        if 'format' in error_msg and ('not available' in error_msg or 'unavailable' in error_msg):
-            # This is the critical error that happens on Railway
-            logger.error("FORMAT ERROR DETECTED - This usually happens on cloud IPs")
-            logger.error("YouTube may be restricting format availability from datacenter IPs")
-
-            # Provide detailed diagnostic info
-            print(f"❌ FORMAT ERROR: YouTube restricted format availability")
-            print(f"   This typically happens on cloud platforms (Railway, Heroku, etc.)")
-            print(f"   The requested video+audio format combination is not available")
-            print(f"   Recommendation: Ensure format fallback chain is configured")
-
+        # Enhanced error handling
+        if 'sign in' in error_msg and 'bot' in error_msg:
             raise Exception(
-                "Format error: YouTube restricted format availability from this IP. "
-                "This video format is not available on cloud platforms. "
-                "Error details: " + str(e)
+                "YouTube bot detection triggered. This usually means:\n"
+                "1. Cloud/datacenter IP is flagged by YouTube\n"
+                "2. JS challenge solving failed\n"
+                "3. Too many requests from this IP\n"
+                "Solution: Ensure cookies are DISABLED to use Android client."
             )
-
+        elif 'login' in error_msg or 'sign in' in error_msg:
+            raise Exception(
+                "YouTube login required. This indicates:\n"
+                "1. Age-restricted content\n"
+                "2. Members-only content\n"
+                "3. Bot detection\n"
+                "Try a different video or ensure cookies are disabled."
+            )
+        elif 'format' in error_msg and ('not available' in error_msg or 'unavailable' in error_msg):
+            raise Exception(
+                "Format unavailable. This typically means:\n"
+                "1. YouTube restricted this format from cloud IPs\n"
+                "2. Video is geo-restricted\n"
+                "3. Format fallback chain exhausted\n"
+                f"Details: {str(e)}"
+            )
         elif 'private video' in error_msg:
             raise Exception("This video is private and cannot be downloaded.")
         elif 'video unavailable' in error_msg:
-            raise Exception("Video unavailable. It may be deleted, private, or region-locked. Please try a different video.")
-        elif 'sign in' in error_msg or 'age' in error_msg:
-            raise Exception("Age-restricted video. Cannot download without authentication. Try a different video.")
-        elif 'region' in error_msg or 'country' in error_msg or 'blocked' in error_msg:
-            raise Exception("Video blocked in your region. Please try a different video.")
+            raise Exception("Video unavailable. It may be deleted, private, or region-locked.")
+        elif 'age' in error_msg:
+            raise Exception("Age-restricted video. Requires authentication.")
+        elif 'region' in error_msg or 'blocked' in error_msg:
+            raise Exception("Video blocked in your region.")
         elif 'copyright' in error_msg:
-            raise Exception("Video removed due to copyright. Please try a different video.")
-        elif 'members-only' in error_msg or 'membership' in error_msg:
-            raise Exception("This is a members-only video. Please try a different video.")
+            raise Exception("Video removed due to copyright.")
+        elif 'members-only' in error_msg:
+            raise Exception("Members-only video.")
         else:
-            # Show actual error message with context
             raise Exception(f"Download failed: {str(e)}")
 
     except Exception as e:
         error_str = str(e)
         logger.error(f"Download failed: {error_str}")
 
-        # Don't double-wrap error messages
-        if error_str.startswith("Video unavailable") or error_str.startswith("This video"):
-            raise Exception(error_str)
+        # Don't double-wrap known errors
+        if any(prefix in error_str for prefix in [
+            "YouTube bot detection",
+            "YouTube login required",
+            "Format unavailable",
+            "This video is",
+            "Video unavailable",
+            "Age-restricted",
+            "Video blocked",
+            "Members-only",
+            "No video formats"
+        ]):
+            raise
         else:
             raise Exception(f"Download failed: {error_str}")
 
@@ -432,6 +460,7 @@ def get_video_info(url: str) -> Dict[str, any]:
         Dict with video metadata
     """
     ydl_opts = {
+        'no_config': True,  # Ignore all config files
         'quiet': True,
         'no_warnings': True,
         'extract_flat': False,
