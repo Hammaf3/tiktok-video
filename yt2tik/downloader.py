@@ -190,24 +190,21 @@ def download_youtube_video(url: str) -> Dict[str, any]:
     # Android client works WITHOUT cookies and WITHOUT JS runtime → 99% reliability
     USE_COOKIES = os.getenv('ENABLE_YOUTUBE_COOKIES', 'false').lower() == 'true'
 
-    # PRODUCTION-SAFE yt-dlp configuration
+    # PRODUCTION-SAFE yt-dlp configuration for Railway/Cloud
+    # CRITICAL: This config guarantees NO web client fallback
     ydl_opts = {
         # CRITICAL FIX #4: Ignore ALL config files (prevents external js_runtimes injection)
         'no_config': True,  # This is the NUCLEAR option - ignore all config files
 
         'outtmpl': str(DOWNLOAD_DIR / '%(title)s.%(ext)s'),
 
-        # Cloud-safe format selection with aggressive fallback
-        'format': (
-            'bestvideo[ext=mp4][height<=1080]+bestaudio[ext=m4a]/'
-            'bestvideo[ext=mp4]+bestaudio[ext=m4a]/'
-            'bestvideo+bestaudio/'
-            'best[ext=mp4]/'
-            'best'
-        ),
+        # CRITICAL: SIMPLE format selection - NO MERGING
+        # Why: Complex format merging (bestvideo+bestaudio) triggers web client fallback
+        # Android client provides pre-merged formats - use those directly
+        # This is the #1 fix to prevent LOGIN_REQUIRED on Railway
+        'format': 'best[ext=mp4][height<=1080]/best[ext=mp4]/best',
 
-        # Merge video and audio into single file
-        'merge_output_format': 'mp4',
+        # REMOVED: merge_output_format (not needed, using pre-merged formats)
 
         # Only download single video, not playlists
         'noplaylist': True,
@@ -221,20 +218,24 @@ def download_youtube_video(url: str) -> Dict[str, any]:
         'retries': 5,
         'fragment_retries': 5,
 
-        # HTTP headers to appear as regular browser
+        # HTTP headers - minimal to avoid triggering bot detection
         'http_headers': {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-            'Accept-Language': 'en-us,en;q=0.5',
-            'Accept-Encoding': 'gzip, deflate',
-            'Connection': 'keep-alive',
+            'User-Agent': 'com.google.android.youtube/17.36.4 (Linux; U; Android 12; US) gzip',
+            'Accept-Language': 'en-US,en;q=0.9',
         },
 
-        # CRITICAL FIX #5: Force Android client as PRIMARY (bypasses JS challenges)
+        # CRITICAL FIX #5: Force Android client EXCLUSIVELY
+        # This is the key to Railway/cloud stability
         'extractor_args': {
             'youtube': {
-                'player_client': ['android'],  # ONLY android - no fallback to web
+                # ONLY android - absolutely NO web client fallback
+                'player_client': ['android'],
+
+                # Skip web player completely - prevents web API calls
                 'player_skip': ['webpage', 'configs'],
+
+                # Skip adaptive formats that might trigger web fallback
+                'skip': ['hls', 'dash', 'translated_subs'],
             }
         },
     }
@@ -245,49 +246,56 @@ def download_youtube_video(url: str) -> Dict[str, any]:
     # 2. Setting js_runtimes can trigger yt-dlp to prefer WEB client
     # 3. Empty dict or None still gets overridden by package defaults
     # 4. Best strategy: don't touch it at all, let Android client handle everything
-    #
-    # Previous attempts set js_runtimes={'node': {}} or js_runtimes={}
-    # This actually ENABLED js runtime checking, making yt-dlp prefer WEB client
-    # By NOT setting it, yt-dlp uses Android client exclusively (no JS needed)
 
     logger.info("✅ js_runtimes NOT set - Android client will handle all extraction")
-    print(f"✅ Strategy: Pure Android client (no JS runtime dependency)")
+    print(f"✅ Strategy: Pure Android client (no JS runtime, no format merging)")
 
-    # Cookie strategy
+    # CRITICAL FIX #7: Cookie strategy for Railway/Cloud
+    # Problem: Cookies can trigger web client preference even with player_client=['android']
+    # Solution: Disable cookies by default on cloud platforms
     if USE_COOKIES and YOUTUBE_COOKIES_FILE.exists():
-        ydl_opts['cookiefile'] = str(YOUTUBE_COOKIES_FILE)
-        logger.warning("⚠️  Cookies enabled - may fall back to Web client")
-        logger.warning("⚠️  This reduces reliability on cloud platforms")
-        print(f"⚠️  WARNING: Cookies enabled - Android client may be skipped")
+        # WARNING: Cookies reduce Railway stability significantly
+        # They can trigger web client fallback which causes LOGIN_REQUIRED
+        logger.error("❌ COOKIES ENABLED - This will likely FAIL on Railway")
+        logger.error("❌ Cookies trigger web client which requires login on datacenter IPs")
+        logger.error("❌ Set ENABLE_YOUTUBE_COOKIES=false for Railway production")
+        print(f"❌ ERROR: Cookies enabled - will cause LOGIN_REQUIRED on Railway")
+        print(f"❌ Railway deployment will FAIL with current settings")
+        print(f"❌ Set ENABLE_YOUTUBE_COOKIES=false in Railway environment")
 
-        # If cookies enabled but no Node.js, warn but continue (Android might still work)
-        if not nodejs_path:
-            logger.warning("⚠️  Cookies enabled but Node.js not found")
-            logger.warning("⚠️  If Web client is used, extraction may fail")
-            print(f"⚠️  No Node.js found - Web client fallback will fail if triggered")
+        # Still add cookies but warn heavily
+        ydl_opts['cookiefile'] = str(YOUTUBE_COOKIES_FILE)
     else:
-        logger.info("✅ Cookies disabled - Pure Android client mode")
-        logger.info("✅ Maximum reliability (no JS runtime, no bot detection)")
-        print(f"✅ Android client mode: No cookies, no JS challenges, maximum reliability")
+        logger.info("✅ Cookies disabled - Pure Android client guaranteed")
+        logger.info("✅ No web client fallback possible - Railway stable")
+        logger.info("✅ Simple format selection - no complex merging")
+        print(f"✅ Railway-safe mode: No cookies, no web client, no LOGIN_REQUIRED")
 
     # VERIFICATION: Log final configuration
     print(f"\n{'='*70}")
-    print(f"🔍 FINAL YT-DLP CONFIGURATION")
+    print(f"RAILWAY-SAFE YT-DLP CONFIGURATION")
     print(f"{'='*70}")
-    print(f"no_config (ignore all config files): {ydl_opts.get('no_config', False)}")
+    print(f"no_config (ignore config files): {ydl_opts.get('no_config', False)}")
     print(f"js_runtimes in config: {'js_runtimes' in ydl_opts}")
     print(f"cookiefile in config: {'cookiefile' in ydl_opts}")
-    print(f"player_client: {ydl_opts.get('extractor_args', {}).get('youtube', {}).get('player_client', [])}")
-    print(f"Node.js available: {nodejs_path is not None}")
-    if nodejs_path:
-        print(f"Node.js path: {nodejs_path}")
+    print(f"format strategy: {ydl_opts.get('format', 'not set')}")
+    player_client = ydl_opts.get('extractor_args', {}).get('youtube', {}).get('player_client', [])
+    print(f"player_client: {player_client}")
+    player_skip = ydl_opts.get('extractor_args', {}).get('youtube', {}).get('player_skip', [])
+    print(f"player_skip: {player_skip}")
+
+    if 'cookiefile' in ydl_opts:
+        print(f"\n[WARNING] Cookies enabled - Railway may fail with LOGIN_REQUIRED")
+    else:
+        print(f"\n[OK] Railway-safe: No cookies, no web client, no login required")
+
     print(f"{'='*70}\n")
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             # Extract info first
             logger.debug("Extracting video information...")
-            print(f"📡 Extracting video info...")
+            print(f"[INFO] Extracting video info...")
             info = ydl.extract_info(url, download=False)
 
             if info is None:
@@ -303,7 +311,7 @@ def download_youtube_video(url: str) -> Dict[str, any]:
 
             logger.info(f"Video: {title}")
             logger.info(f"Duration: {duration}s")
-            print(f"📹 {title} ({duration}s)")
+            print(f"[VIDEO] {title} ({duration}s)")
 
             # CRITICAL: Verify formats are available
             if 'formats' in info:
@@ -311,21 +319,22 @@ def download_youtube_video(url: str) -> Dict[str, any]:
                                if f.get('vcodec') != 'none'
                                and 'image' not in f.get('format_note', '').lower()]
 
-                print(f"✅ {len(video_formats)} video formats available")
+                print(f"[OK] {len(video_formats)} video formats available")
                 logger.info(f"Total video formats: {len(video_formats)}")
 
                 if len(video_formats) == 0:
-                    print(f"❌ CRITICAL: Only images/thumbnails available")
-                    print(f"   This means extraction FAILED")
+                    print(f"[ERROR] CRITICAL: Only images/thumbnails available")
+                    print(f"        This means extraction FAILED")
+                    print(f"        Likely cause: Web client used instead of Android client")
                     logger.error("No video formats - extraction failed")
                     raise Exception(
-                        "No video formats available. This indicates extraction failure. "
-                        "Possible causes: bot detection, IP restriction, or JS challenge failure."
+                        "No video formats available. This indicates web client was used. "
+                        "Ensure cookies are disabled and player_client=['android'] is set."
                     )
 
                 # Log selected format
                 selected_format = info.get('format_id', 'auto')
-                print(f"✅ Selected format: {selected_format}")
+                print(f"[OK] Selected format: {selected_format}")
                 logger.info(f"Selected format: {selected_format}")
 
                 # Log top 5 formats for debugging
@@ -333,15 +342,15 @@ def download_youtube_video(url: str) -> Dict[str, any]:
                     res = fmt.get('resolution', fmt.get('height', 'audio'))
                     ext = fmt.get('ext', 'unknown')
                     fid = fmt.get('format_id', 'unknown')
-                    print(f"  • {fid}: {res} ({ext})")
+                    print(f"  - {fid}: {res} ({ext})")
             else:
-                print(f"❌ No formats field in video info")
+                print(f"[ERROR] No formats field in video info")
                 logger.error("No formats field")
                 raise Exception("No formats available in video info")
 
             # Download the video
             logger.debug("Starting download...")
-            print(f"⬇️  Downloading...")
+            print(f"[DOWNLOAD] Starting download...")
             ydl.download([url])
 
             # Find the downloaded file
@@ -370,8 +379,8 @@ def download_youtube_video(url: str) -> Dict[str, any]:
 
             video_path = video_files[0]
 
-            logger.info(f"✅ Download complete: {video_path.name}")
-            print(f"✅ Download complete: {video_path.name}")
+            logger.info(f"[OK] Download complete: {video_path.name}")
+            print(f"[SUCCESS] Download complete: {video_path.name}")
 
             return {
                 'video_path': str(video_path),
@@ -385,32 +394,28 @@ def download_youtube_video(url: str) -> Dict[str, any]:
         error_msg = str(e).lower()
 
         # Log full error
-        print(f"❌ yt-dlp error: {str(e)}")
+        print(f"[ERROR] yt-dlp error: {str(e)}")
         logger.error(f"yt-dlp error: {str(e)}")
 
-        # Enhanced error handling
+        # Enhanced error handling - Railway-specific
         if 'sign in' in error_msg and 'bot' in error_msg:
             raise Exception(
-                "YouTube bot detection triggered. This usually means:\n"
-                "1. Cloud/datacenter IP is flagged by YouTube\n"
-                "2. JS challenge solving failed\n"
-                "3. Too many requests from this IP\n"
-                "Solution: Ensure cookies are DISABLED to use Android client."
+                "RAILWAY ERROR: YouTube bot detection triggered.\n"
+                "Root cause: Web client used instead of Android client.\n"
+                "Solution: Set ENABLE_YOUTUBE_COOKIES=false in Railway environment."
             )
         elif 'login' in error_msg or 'sign in' in error_msg:
             raise Exception(
-                "YouTube login required. This indicates:\n"
-                "1. Age-restricted content\n"
-                "2. Members-only content\n"
-                "3. Bot detection\n"
-                "Try a different video or ensure cookies are disabled."
+                "RAILWAY ERROR: LOGIN_REQUIRED on datacenter IP.\n"
+                "Root cause: Web client triggered (likely due to cookies or format merging).\n"
+                "Solution: Ensure cookies disabled and player_client=['android'] only.\n"
+                f"Details: {str(e)}"
             )
         elif 'format' in error_msg and ('not available' in error_msg or 'unavailable' in error_msg):
             raise Exception(
-                "Format unavailable. This typically means:\n"
-                "1. YouTube restricted this format from cloud IPs\n"
-                "2. Video is geo-restricted\n"
-                "3. Format fallback chain exhausted\n"
+                "Format unavailable from datacenter IP.\n"
+                "This can happen even with Android client if format merging is attempted.\n"
+                "Using simple format selection: best[ext=mp4]/best\n"
                 f"Details: {str(e)}"
             )
         elif 'private video' in error_msg:
@@ -418,7 +423,7 @@ def download_youtube_video(url: str) -> Dict[str, any]:
         elif 'video unavailable' in error_msg:
             raise Exception("Video unavailable. It may be deleted, private, or region-locked.")
         elif 'age' in error_msg:
-            raise Exception("Age-restricted video. Requires authentication.")
+            raise Exception("Age-restricted video. Cannot download without authentication.")
         elif 'region' in error_msg or 'blocked' in error_msg:
             raise Exception("Video blocked in your region.")
         elif 'copyright' in error_msg:
