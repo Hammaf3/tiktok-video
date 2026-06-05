@@ -113,25 +113,27 @@ def sanitize_filename(filename: str) -> str:
     return filename
 
 
-def download_youtube_video(url: str) -> Dict[str, any]:
+def download_youtube_video(url: str, _retry_count: int = 0) -> Dict[str, any]:
     """
-    Download YouTube video with PRODUCTION-HARDENED configuration
+    Download YouTube video with CLOUD-SAFE configuration
 
     CRITICAL FIXES:
     1. Delete all yt-dlp config files (prevents external js_runtimes injection)
-    2. Use --no-config flag (ignore system configs)
-    3. Disable cookies by default (enables Android client, no JS needed)
-    4. Explicit Node.js PATH setup (if needed for web client)
-    5. Cloud-IP-safe format fallback chain
+    2. Force no_config=True (ignore system configs)
+    3. Force js_runtimes={} (disable whitelist, prevent web client)
+    4. Disable cookies by default (pure Android client mode)
+    5. Simple format selection (no merging, no web fallback)
+    6. Auto-retry on LOGIN_REQUIRED with failsafe config
 
     Args:
         url: YouTube video URL
+        _retry_count: Internal retry counter (do not set manually)
 
     Returns:
         Dict with video_path, title, description, duration
 
     Raises:
-        Exception: If download fails
+        Exception: If download fails after retry
     """
     logger.info(f"Starting download from: {url}")
 
@@ -149,60 +151,24 @@ def download_youtube_video(url: str) -> Dict[str, any]:
 
     progress_bar = DownloadProgressBar()
 
-    # Check Node.js availability
-    import shutil
-    import subprocess
-
-    nodejs_path = shutil.which('node') or shutil.which('nodejs')
-
-    # CRITICAL FIX #2: Add Nix profile to PATH for Railway environment
-    # Railway uses Nix package manager, Node.js installed at /root/.nix-profile/bin/node
-    if not nodejs_path:
-        nix_node_path = '/root/.nix-profile/bin/node'
-        if Path(nix_node_path).exists():
-            nix_bin_dir = '/root/.nix-profile/bin'
-            current_path = os.environ.get('PATH', '')
-            if nix_bin_dir not in current_path:
-                os.environ['PATH'] = f"{nix_bin_dir}:{current_path}"
-                logger.info(f"Added Nix bin to PATH: {nix_bin_dir}")
-                print(f"🔧 Added Nix profile to PATH")
-
-            # Re-check after PATH update
-            nodejs_path = shutil.which('node')
-
-    if nodejs_path:
-        try:
-            result = subprocess.run([nodejs_path, '--version'],
-                                  capture_output=True, text=True, timeout=5)
-            node_version = result.stdout.strip()
-            print(f"✅ Node.js found: {nodejs_path} ({node_version})")
-            logger.info(f"Node.js available at {nodejs_path} version {node_version}")
-        except Exception as e:
-            print(f"⚠️ Node.js found but version check failed: {e}")
-            logger.warning(f"Node.js check failed: {e}")
-            nodejs_path = None  # Treat as unavailable if version check fails
-    else:
-        print(f"⚠️ Node.js NOT found in PATH")
-        logger.warning("Node.js not found - Android client will be used")
-
-    # CRITICAL FIX #3: DISABLE cookies by default on cloud platforms
+    # CRITICAL FIX #2: DISABLE cookies by default on cloud platforms
     # Cookies force WEB client → WEB client needs JS runtime → more failure points
     # Android client works WITHOUT cookies and WITHOUT JS runtime → 99% reliability
     USE_COOKIES = os.getenv('ENABLE_YOUTUBE_COOKIES', 'false').lower() == 'true'
 
-    # PRODUCTION-SAFE yt-dlp configuration for Railway/Cloud
-    # CRITICAL: This config guarantees NO web client fallback
+    # PRODUCTION-SAFE yt-dlp configuration for Cloud/Railway
+    # This config guarantees NO web client fallback
     ydl_opts = {
-        # CRITICAL FIX #4: Ignore ALL config files (prevents external js_runtimes injection)
-        'no_config': True,  # This is the NUCLEAR option - ignore all config files
+        # CRITICAL FIX #2: Ignore ALL config files (prevents external js_runtimes injection)
+        'no_config': True,  # NUCLEAR option - ignore all config files
 
         'outtmpl': str(DOWNLOAD_DIR / '%(title)s.%(ext)s'),
 
-        # CRITICAL: SIMPLE format selection - NO MERGING
+        # CRITICAL FIX #3: SIMPLE format selection - NO MERGING
         # Why: Complex format merging (bestvideo+bestaudio) triggers web client fallback
         # Android client provides pre-merged formats - use those directly
         # This is the #1 fix to prevent LOGIN_REQUIRED on Railway
-        'format': 'best[ext=mp4][height<=1080]/best[ext=mp4]/best',
+        'format': 'best[ext=mp4]/best',
 
         # REMOVED: merge_output_format (not needed, using pre-merged formats)
 
@@ -224,8 +190,8 @@ def download_youtube_video(url: str) -> Dict[str, any]:
             'Accept-Language': 'en-US,en;q=0.9',
         },
 
-        # CRITICAL FIX #5: Force Android client EXCLUSIVELY
-        # This is the key to Railway/cloud stability
+        # CRITICAL FIX #4: Force Android client EXCLUSIVELY
+        # This is the key to cloud stability
         'extractor_args': {
             'youtube': {
                 # ONLY android - absolutely NO web client fallback
@@ -240,54 +206,53 @@ def download_youtube_video(url: str) -> Dict[str, any]:
         },
     }
 
-    # CRITICAL FIX #6: NEVER set js_runtimes in ydl_opts
-    # Why? Because:
-    # 1. Android client doesn't need JS runtime at all
-    # 2. Setting js_runtimes can trigger yt-dlp to prefer WEB client
-    # 3. Empty dict or None still gets overridden by package defaults
-    # 4. Best strategy: don't touch it at all, let Android client handle everything
+    # CRITICAL FIX #5: FORCE js_runtimes to empty dict
+    # Why: yt-dlp 2026.3.17+ defaults to {'deno': {}} which excludes Node.js
+    # Android client doesn't need JS runtime, so we explicitly disable it
+    # This prevents any JS runtime whitelist from interfering with Android client
+    ydl_opts['js_runtimes'] = {}
 
-    logger.info("✅ js_runtimes NOT set - Android client will handle all extraction")
-    print(f"✅ Strategy: Pure Android client (no JS runtime, no format merging)")
+    logger.info("✅ js_runtimes forced to {} - Android client pure mode")
+    print(f"✅ Strategy: Pure Android client (js_runtimes disabled, no format merging)")
 
-    # CRITICAL FIX #7: Cookie strategy for Railway/Cloud
+    # CRITICAL FIX #6: Cookie strategy for Cloud platforms
     # Problem: Cookies can trigger web client preference even with player_client=['android']
     # Solution: Disable cookies by default on cloud platforms
     if USE_COOKIES and YOUTUBE_COOKIES_FILE.exists():
-        # WARNING: Cookies reduce Railway stability significantly
+        # WARNING: Cookies reduce cloud stability significantly
         # They can trigger web client fallback which causes LOGIN_REQUIRED
-        logger.error("❌ COOKIES ENABLED - This will likely FAIL on Railway")
+        logger.error("❌ COOKIES ENABLED - This will likely FAIL on cloud")
         logger.error("❌ Cookies trigger web client which requires login on datacenter IPs")
-        logger.error("❌ Set ENABLE_YOUTUBE_COOKIES=false for Railway production")
-        print(f"❌ ERROR: Cookies enabled - will cause LOGIN_REQUIRED on Railway")
-        print(f"❌ Railway deployment will FAIL with current settings")
-        print(f"❌ Set ENABLE_YOUTUBE_COOKIES=false in Railway environment")
+        logger.error("❌ Set ENABLE_YOUTUBE_COOKIES=false for cloud production")
+        print(f"❌ ERROR: Cookies enabled - will cause LOGIN_REQUIRED on cloud")
+        print(f"❌ Cloud deployment will FAIL with current settings")
+        print(f"❌ Set ENABLE_YOUTUBE_COOKIES=false in environment")
 
         # Still add cookies but warn heavily
         ydl_opts['cookiefile'] = str(YOUTUBE_COOKIES_FILE)
     else:
         logger.info("✅ Cookies disabled - Pure Android client guaranteed")
-        logger.info("✅ No web client fallback possible - Railway stable")
+        logger.info("✅ No web client fallback possible - Cloud stable")
         logger.info("✅ Simple format selection - no complex merging")
-        print(f"✅ Railway-safe mode: No cookies, no web client, no LOGIN_REQUIRED")
+        print(f"✅ Cloud-safe mode: No cookies, no web client, no LOGIN_REQUIRED")
 
     # VERIFICATION: Log final configuration
     print(f"\n{'='*70}")
-    print(f"RAILWAY-SAFE YT-DLP CONFIGURATION")
+    print(f"CLOUD-SAFE YT-DLP CONFIGURATION")
     print(f"{'='*70}")
-    print(f"no_config (ignore config files): {ydl_opts.get('no_config', False)}")
-    print(f"js_runtimes in config: {'js_runtimes' in ydl_opts}")
-    print(f"cookiefile in config: {'cookiefile' in ydl_opts}")
-    print(f"format strategy: {ydl_opts.get('format', 'not set')}")
+    print(f"✅ no_config: {ydl_opts.get('no_config', False)} (ignore all config files)")
+    print(f"✅ js_runtimes: {ydl_opts.get('js_runtimes', 'not set')} (disabled whitelist)")
+    print(f"✅ cookiefile: {'ENABLED ⚠️' if 'cookiefile' in ydl_opts else 'DISABLED ✓'}")
+    print(f"✅ format: {ydl_opts.get('format', 'not set')}")
     player_client = ydl_opts.get('extractor_args', {}).get('youtube', {}).get('player_client', [])
-    print(f"player_client: {player_client}")
+    print(f"✅ player_client: {player_client} (android only)")
     player_skip = ydl_opts.get('extractor_args', {}).get('youtube', {}).get('player_skip', [])
-    print(f"player_skip: {player_skip}")
+    print(f"✅ player_skip: {player_skip} (no web fallback)")
 
     if 'cookiefile' in ydl_opts:
-        print(f"\n[WARNING] Cookies enabled - Railway may fail with LOGIN_REQUIRED")
+        print(f"\n⚠️  WARNING: Cookies enabled - may fail with LOGIN_REQUIRED on cloud")
     else:
-        print(f"\n[OK] Railway-safe: No cookies, no web client, no login required")
+        print(f"\n✅ Cloud-safe: No cookies, android-only, no login required")
 
     print(f"{'='*70}\n")
 
@@ -397,25 +362,50 @@ def download_youtube_video(url: str) -> Dict[str, any]:
         print(f"[ERROR] yt-dlp error: {str(e)}")
         logger.error(f"yt-dlp error: {str(e)}")
 
-        # Enhanced error handling - Railway-specific
+        # AUTO-RETRY LOGIC: Handle YouTube blocking/login errors
+        is_blocking_error = (
+            'sign in' in error_msg or
+            'login' in error_msg or
+            'bot' in error_msg or
+            ('format' in error_msg and 'not available' in error_msg)
+        )
+
+        if is_blocking_error and _retry_count == 0:
+            # First failure - retry with failsafe config
+            print(f"\n⚠️  YouTube blocking detected - retrying with failsafe config...")
+            logger.warning(f"YouTube blocking detected, retrying: {error_msg}")
+
+            # Force disable cookies for retry
+            if os.getenv('ENABLE_YOUTUBE_COOKIES'):
+                print(f"🔧 Temporarily disabling cookies for retry...")
+                original_cookie_setting = os.environ.get('ENABLE_YOUTUBE_COOKIES')
+                os.environ['ENABLE_YOUTUBE_COOKIES'] = 'false'
+
+            try:
+                return download_youtube_video(url, _retry_count=1)
+            finally:
+                # Restore original setting
+                if 'original_cookie_setting' in locals():
+                    os.environ['ENABLE_YOUTUBE_COOKIES'] = original_cookie_setting
+
+        # Enhanced error messages - cloud-generic
         if 'sign in' in error_msg and 'bot' in error_msg:
             raise Exception(
-                "RAILWAY ERROR: YouTube bot detection triggered.\n"
+                "❌ YouTube bot detection triggered.\n"
                 "Root cause: Web client used instead of Android client.\n"
-                "Solution: Set ENABLE_YOUTUBE_COOKIES=false in Railway environment."
+                "Fix: Set ENABLE_YOUTUBE_COOKIES=false in environment."
             )
         elif 'login' in error_msg or 'sign in' in error_msg:
             raise Exception(
-                "RAILWAY ERROR: LOGIN_REQUIRED on datacenter IP.\n"
-                "Root cause: Web client triggered (likely due to cookies or format merging).\n"
-                "Solution: Ensure cookies disabled and player_client=['android'] only.\n"
+                "❌ LOGIN_REQUIRED on cloud/datacenter IP.\n"
+                "Root cause: Web client fallback triggered.\n"
+                "Fix: Cookies must be disabled, android client only.\n"
                 f"Details: {str(e)}"
             )
         elif 'format' in error_msg and ('not available' in error_msg or 'unavailable' in error_msg):
             raise Exception(
-                "Format unavailable from datacenter IP.\n"
-                "This can happen even with Android client if format merging is attempted.\n"
-                "Using simple format selection: best[ext=mp4]/best\n"
+                "❌ Format unavailable from cloud IP.\n"
+                "This indicates web client was used instead of Android client.\n"
                 f"Details: {str(e)}"
             )
         elif 'private video' in error_msg:
