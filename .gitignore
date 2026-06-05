@@ -67,3 +67,13 @@ Thumbs.db
 # FFmpeg
 ffmpeg.exe
 ffprobe.exe
+
+# Legacy deployment files (not needed for Hugging Face Spaces)
+Procfile
+railway.json
+vercel.json
+nixpacks.toml
+runtime.txt
+railway_debug.sh
+railway_diagnostic.py
+deploy_heroku.sh

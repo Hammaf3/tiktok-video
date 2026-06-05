@@ -1190,6 +1190,9 @@ if __name__ == '__main__':
         DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
         OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
+        # Get port from environment (for Hugging Face Spaces compatibility)
+        port = int(os.getenv('PORT', 5000))
+
         print("=" * 60)
         print("🚀 Integrated YouTube Analyzer + Converter + TikTok Upload")
         print("=" * 60)
@@ -1200,7 +1203,7 @@ if __name__ == '__main__':
         print("✅ Auto-upload to TikTok (optional)")
         print("✅ Browse your YouTube channels")
         print("")
-        print("🌐 Open in browser: http://localhost:5000")
+        print(f"🌐 Server running on: http://0.0.0.0:{port}")
         print("")
         print("=" * 60)
         print("")
@@ -1214,8 +1217,9 @@ if __name__ == '__main__':
         print("")
         print("=" * 60)
 
-        # Run the app
-        app.run(debug=True, host='0.0.0.0', port=5000)
+        # Run the app (debug mode disabled for production)
+        debug_mode = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
+        app.run(debug=debug_mode, host='0.0.0.0', port=port)
 
     except Exception as e:
         print(f"\n❌ Failed to start application: {str(e)}")

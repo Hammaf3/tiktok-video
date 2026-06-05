@@ -1,7 +1,6 @@
-# yt2tik - YouTube to TikTok Converter
-# System 1 Requirements
+# YouTube to TikTok Converter - Dependencies
 
-# YouTube downloading (latest version for Railway compatibility)
+# YouTube downloading (latest version for cloud compatibility)
 yt-dlp>=2024.12.23
 
 # Video processing
@@ -17,17 +16,20 @@ python-dotenv==1.0.1
 rich==13.7.1
 tqdm==4.66.4
 
-# YouTube Data API (for System 2)
+# YouTube Data API
 google-api-python-client==2.134.0
 google-auth-httplib2==0.2.0
 google-auth-oauthlib==1.2.0
 
-# Data processing (for System 2)
+# Data processing
 pandas==2.2.2
 
 # Utilities
 python-dateutil==2.9.0
 
-# Production server
-gunicorn==21.2.0
+# Web framework
 Flask==3.0.0
+Werkzeug==3.0.0
+
+# Production WSGI server
+gunicorn==21.2.0

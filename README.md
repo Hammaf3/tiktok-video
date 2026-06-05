@@ -1,6 +1,25 @@
-# 🎬 yt2tik - YouTube to TikTok Automation Suite
+---
+title: YouTube to TikTok Converter
+emoji: 🎬
+colorFrom: red
+colorTo: blue
+sdk: docker
+pinned: false
+license: mit
+---
 
-Complete automation suite for converting YouTube videos to TikTok format and analyzing viral content.
+# 🎬 YouTube to TikTok Converter
+
+Convert YouTube videos to TikTok format with automatic optimization and optional upload to TikTok.
+
+## ✨ Features
+
+- **YouTube Video Search**: Search viral videos by keyword and country
+- **Smart Conversion**: Automatically converts videos to TikTok's 9:16 format
+- **Auto-Detection**: Intelligently finds the best clip segment
+- **TikTok Upload**: Direct upload to TikTok with OAuth authentication
+- **YouTube Channel Browser**: Browse your YouTube channels and videos
+- **Production Ready**: Comprehensive error handling and validation
 
 ## 📦 Two Powerful Systems
 

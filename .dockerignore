@@ -1,0 +1,101 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info
+dist
+build
+.venv
+venv
+env
+
+# Environment
+.env.local
+.env.*.local
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+tmp/
+logs/
+reports/
+*.log
+
+# Documentation (keep only README.md)
+*.txt
+!requirements.txt
+!youtube_cookies.txt.example
+QUICKSTART.md
+PROJECT_SUMMARY.md
+DEPLOYMENT*.md
+TECHNICAL*.md
+RAILWAY*.md
+CLOUD*.md
+ROOT_CAUSE*.md
+FINAL*.md
+ANALYZER_GUIDE.md
+CLIENT_QUICK_START.md
+COOKIES_SETUP.md
+CRITICAL_UPDATE.md
+DEPLOY*.md
+DO_THIS_NOW.txt
+EXECUTIVE_SUMMARY.md
+INSTALL_FFMPEG.md
+IMMEDIATE_ACTION.txt
+INVESTIGATION_REPORT.md
+MONITORING_GUIDE.md
+PRODUCTION*.md
+QUICK_FIX.md
+SPEED_OPTIMIZATION_COMPLETE.md
+START_HERE.txt
+STEP_*.txt
+TIKTOK_OAUTH_FIX.md
+TROUBLESHOOTING.md
+VERCEL_DEPLOYMENT_ISSUES.md
+WEB_SETUP.md
+YOUTUBE_DEBUG_STEPS.md
+
+# Test and debug files
+test_*.py
+debug_*.py
+verify_*.py
+fix_*.py
+*_diagnostic.py
+analyzer_web.py
+simple_web_app.py
+railway_debug.sh
+restart_app.bat
+setup.bat
+setup.sh
+deploy_heroku.sh
+
+# Config files for other platforms
+Procfile
+railway.json
+vercel.json
+nixpacks.toml
+runtime.txt
+
+# Examples
+examples/
+yt_analyzer/
+
+# API directory (keep main integrated_app.py only)
+api/
