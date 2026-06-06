@@ -69,6 +69,18 @@ def index():
     return render_template('integrated.html', countries=COUNTRIES, tiktok_connected=tiktok_connected, youtube_connected=youtube_connected)
 
 
+@app.route('/terms')
+def terms():
+    """Terms of Service page"""
+    return render_template('terms.html')
+
+
+@app.route('/privacy')
+def privacy():
+    """Privacy Policy page"""
+    return render_template('privacy.html')
+
+
 @app.route('/debug/session')
 def debug_session():
     """Debug endpoint to check session status"""

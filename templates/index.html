@@ -206,6 +206,39 @@
             border-radius: 5px;
             color: #721c24;
         }
+
+        .footer {
+            background: #f8f9fa;
+            padding: 30px 40px;
+            border-top: 2px solid #e0e0e0;
+            text-align: center;
+            margin-top: 40px;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .footer-links a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.3s;
+        }
+
+        .footer-links a:hover {
+            color: #764ba2;
+            text-decoration: underline;
+        }
+
+        .footer p {
+            color: #666;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
@@ -308,6 +341,15 @@
                 <p id="errorMessage"></p>
             </div>
         </div>
+    </div>
+
+    <div class="footer">
+        <div class="footer-links">
+            <a href="/">Home</a>
+            <a href="/terms">Terms of Service</a>
+            <a href="/privacy">Privacy Policy</a>
+        </div>
+        <p>&copy; 2026 YouTube to TikTok Converter. All rights reserved.</p>
     </div>
 
     <script>
