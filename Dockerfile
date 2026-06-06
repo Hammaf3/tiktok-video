@@ -1,5 +1,5 @@
-# Hugging Face Docker Space - YouTube to TikTok Converter
-FROM python:3.11-slim
+# Railway Deployment - YouTube to TikTok Converter
+FROM python:3.12-slim
 
 # Set working directory
 WORKDIR /app
@@ -29,10 +29,12 @@ RUN mkdir -p tmp/yt2tik/downloads tmp/yt2tik/output logs reports
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
 ENV FLASK_APP=integrated_app.py
-ENV PORT=7860
 
-# Expose Hugging Face Space port
-EXPOSE 7860
+# Railway provides PORT environment variable dynamically
+# Do NOT set a default port here - let Railway control it
 
-# Run the application on 0.0.0.0:7860
-CMD ["gunicorn", "integrated_app:app", "--bind", "0.0.0.0:7860", "--workers", "2", "--timeout", "300", "--access-logfile", "-", "--error-logfile", "-"]
+# Expose port (Railway ignores this but good practice)
+EXPOSE 8080
+
+# Run the application - $PORT is provided by Railway
+CMD gunicorn integrated_app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 300 --access-logfile - --error-logfile -
