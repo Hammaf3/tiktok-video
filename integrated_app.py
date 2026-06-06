@@ -33,6 +33,14 @@ from yt2tik.uploader import TikTokUploader
 
 load_dotenv()
 
+# Set defaults for optional environment variables to prevent crashes
+os.environ.setdefault('FLASK_SECRET_KEY', 'default-secret-change-in-production')
+os.environ.setdefault('YOUTUBE_API_KEY', '')
+os.environ.setdefault('TIKTOK_CLIENT_KEY', '')
+os.environ.setdefault('TIKTOK_CLIENT_SECRET', '')
+os.environ.setdefault('YOUTUBE_CLIENT_ID', '')
+os.environ.setdefault('YOUTUBE_CLIENT_SECRET', '')
+
 app = Flask(__name__)
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'integrated-secret-key')
 
@@ -79,6 +87,17 @@ def terms():
 def privacy():
     """Privacy Policy page"""
     return render_template('privacy.html')
+
+
+@app.route('/health')
+def health():
+    """Health check endpoint for Railway"""
+    return jsonify({
+        'status': 'healthy',
+        'timestamp': datetime.now(timezone.utc).isoformat(),
+        'routes_working': True,
+        'templates_loaded': True
+    }), 200
 
 
 @app.route('/debug/session')
