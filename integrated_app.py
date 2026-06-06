@@ -37,53 +37,24 @@ except ImportError as e:
 
 # Import existing modules with error handling
 try:
-    from yt2tik.downloader_production import (
-        download_youtube_video,
-        VideoRestrictionError,
-        VideoUnavailableError
-    )
-    from yt2tik.converter_stable import convert_to_tiktok_format
+    from yt2tik.downloader import download_youtube_video
+    from yt2tik.converter import convert_to_tiktok_format
     from yt2tik.caption_gen import generate_caption
     from yt2tik.uploader import TikTokUploader
     YT2TIK_AVAILABLE = True
-    print("✅ Using PRODUCTION yt2tik modules (latest)")
 except ImportError as e:
-    print(f"Warning: Production yt2tik modules not available, trying fallback: {e}")
-    try:
-        from yt2tik.downloader_stable import download_youtube_video
-        VideoRestrictionError = Exception
-        VideoUnavailableError = Exception
-        from yt2tik.converter_stable import convert_to_tiktok_format
-        from yt2tik.caption_gen import generate_caption
-        from yt2tik.uploader import TikTokUploader
-        YT2TIK_AVAILABLE = True
-        print("✅ Using STABLE yt2tik modules (fallback)")
-    except ImportError as e:
-        print(f"Warning: Stable yt2tik modules not available, trying original: {e}")
-        try:
-            from yt2tik.downloader import download_youtube_video
-            VideoRestrictionError = Exception
-            VideoUnavailableError = Exception
-            from yt2tik.converter import convert_to_tiktok_format
-            from yt2tik.caption_gen import generate_caption
-            from yt2tik.uploader import TikTokUploader
-            YT2TIK_AVAILABLE = True
-            print("⚠️  Using original yt2tik modules (oldest fallback)")
-        except ImportError as e:
-            print(f"Warning: yt2tik modules not fully available: {e}")
-            YT2TIK_AVAILABLE = False
-            VideoRestrictionError = Exception
-            VideoUnavailableError = Exception
-            # Create dummy functions so the app doesn't crash
-            def download_youtube_video(url):
-                raise Exception("YouTube download functionality not available")
-            def convert_to_tiktok_format(*args, **kwargs):
-                raise Exception("Video conversion functionality not available")
-            def generate_caption(text):
-                return text
-            class TikTokUploader:
-                def upload(self, *args, **kwargs):
-                    raise Exception("TikTok upload functionality not available")
+    print(f"Warning: yt2tik modules not fully available: {e}")
+    YT2TIK_AVAILABLE = False
+    # Create dummy functions so the app doesn't crash
+    def download_youtube_video(url):
+        raise Exception("YouTube download functionality not available")
+    def convert_to_tiktok_format(*args, **kwargs):
+        raise Exception("Video conversion functionality not available")
+    def generate_caption(text):
+        return text
+    class TikTokUploader:
+        def upload(self, *args, **kwargs):
+            raise Exception("TikTok upload functionality not available")
 
 load_dotenv()
 
@@ -686,16 +657,6 @@ def process_video(job_id, youtube_url, start_time, duration, caption, auto_detec
             file_size_mb = Path(video_path).stat().st_size / (1024 * 1024)
             safe_print(f"Downloaded: {video_title} ({file_size_mb:.1f} MB)")
 
-        except VideoRestrictionError as e:
-            update_job_status('error', 0, f'❌ Video Restricted: {str(e)}')
-            safe_print(f"Restriction error: {str(e)}")
-            return
-
-        except VideoUnavailableError as e:
-            update_job_status('error', 0, f'❌ Video Unavailable: {str(e)}')
-            safe_print(f"Unavailable error: {str(e)}")
-            return
-
         except Exception as e:
             error_msg = str(e)
             if "Video unavailable" in error_msg or "private" in error_msg.lower():
@@ -704,8 +665,6 @@ def process_video(job_id, youtube_url, start_time, duration, caption, auto_detec
                 update_job_status('error', 0, 'Video blocked in your region. Please try a different video.')
             elif "age" in error_msg.lower() or "sign in" in error_msg.lower():
                 update_job_status('error', 0, 'Age-restricted video. Please try a different video.')
-            elif "timeout" in error_msg.lower():
-                update_job_status('error', 0, 'Download timeout. Try a shorter video.')
             else:
                 update_job_status('error', 0, f'Download failed: {error_msg}')
             safe_print(f"Download error: {error_msg}")

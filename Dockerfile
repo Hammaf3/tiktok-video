@@ -37,5 +37,4 @@ ENV FLASK_APP=integrated_app.py
 EXPOSE 8080
 
 # Run the application - $PORT is provided by Railway
-# Use app.py for simple API or integrated_app.py for full web app
-CMD gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 300 --access-logfile - --error-logfile -
+CMD gunicorn integrated_app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 300 --access-logfile - --error-logfile -
