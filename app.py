@@ -1,15 +1,15 @@
 """
-Production-Ready Flask App: YouTube to TikTok Converter
-Deployed on Railway - Zero-crash architecture with comprehensive error handling
+Production Flask App: YouTube to TikTok Converter
+Web UI + API - Railway Deployment Ready
 """
-from flask import Flask, render_template, request, jsonify, send_file, session
+from flask import Flask, render_template, request, jsonify, send_file
 import os
 import sys
 from pathlib import Path
 from dotenv import load_dotenv
 import threading
 import uuid
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 import time
 import traceback
 
@@ -31,14 +31,14 @@ try:
     )
     DOWNLOADER_AVAILABLE = True
 except ImportError:
-    print("⚠️  Production downloader not available, using fallback")
+    print("Warning: Production downloader not available, using fallback")
     try:
         from yt2tik.downloader_stable import download_youtube_video
         VideoRestrictionError = Exception
         VideoUnavailableError = Exception
         DOWNLOADER_AVAILABLE = True
     except ImportError:
-        print("❌ No downloader available")
+        print("Error: No downloader available")
         DOWNLOADER_AVAILABLE = False
         def download_youtube_video(url):
             raise Exception("Downloader not configured")
@@ -49,23 +49,10 @@ try:
     from yt2tik.converter_stable import convert_to_tiktok_format
     CONVERTER_AVAILABLE = True
 except ImportError:
-    print("❌ Converter not available")
+    print("Error: Converter not available")
     CONVERTER_AVAILABLE = False
     def convert_to_tiktok_format(*args, **kwargs):
         raise Exception("Converter not configured")
-
-try:
-    from yt2tik.caption_gen import generate_caption
-except ImportError:
-    def generate_caption(title, description):
-        return title[:100]
-
-try:
-    from yt2tik.uploader import TikTokUploader
-except ImportError:
-    class TikTokUploader:
-        def upload(self, *args, **kwargs):
-            raise Exception("TikTok uploader not configured")
 
 load_dotenv()
 
@@ -93,8 +80,8 @@ class JobStore:
     def __init__(self):
         self.jobs = {}
         self.lock = threading.Lock()
-        self.max_jobs = 1000  # Prevent memory issues
-        self.job_ttl = 3600  # 1 hour TTL
+        self.max_jobs = 1000
+        self.job_ttl = 3600  # 1 hour
 
     def create_job(self, job_id: str) -> dict:
         """Create a new job"""
@@ -116,7 +103,6 @@ class JobStore:
         """Update job status"""
         with self.lock:
             if job_id not in self.jobs:
-                # Job expired or never existed - create placeholder
                 self.jobs[job_id] = {
                     'job_id': job_id,
                     'status': 'error',
@@ -134,7 +120,6 @@ class JobStore:
             if message:
                 job['message'] = message
 
-            # Add extra fields
             for key, value in kwargs.items():
                 job[key] = value
 
@@ -190,21 +175,77 @@ class JobStore:
 # Global job store
 job_store = JobStore()
 
-# ==================== ROUTES ====================
+# ==================== WEB UI ROUTES ====================
 
 @app.route('/')
 def index():
-    """Health check / home page"""
+    """Main web page"""
+    try:
+        return render_template('simple.html')
+    except Exception as e:
+        print(f"Template error: {e}")
+        # Fallback HTML if template not found
+        return """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>YouTube to TikTok Converter</title>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+        </head>
+        <body style="font-family: Arial; max-width: 800px; margin: 50px auto; padding: 20px;">
+            <h1>YouTube to TikTok Converter</h1>
+            <p><strong>Error:</strong> Template not found. Using API mode.</p>
+            <h2>API Endpoints:</h2>
+            <ul>
+                <li><code>GET /health</code> - Health check</li>
+                <li><code>POST /convert</code> - Start conversion</li>
+                <li><code>GET /status/&lt;job_id&gt;</code> - Check status</li>
+                <li><code>GET /download/&lt;filename&gt;</code> - Download video</li>
+            </ul>
+            <h3>Example:</h3>
+            <pre>
+curl -X POST https://your-app.railway.app/convert \\
+  -H "Content-Type: application/json" \\
+  -d '{"youtube_url": "https://youtube.com/watch?v=VIDEO_ID", "duration": 30}'
+            </pre>
+        </body>
+        </html>
+        """
+
+
+@app.route('/api')
+def api_docs():
+    """API documentation (JSON)"""
     return jsonify({
         'status': 'online',
         'service': 'YouTube to TikTok Converter',
         'version': '1.0.0',
         'timestamp': datetime.now(timezone.utc).isoformat(),
         'endpoints': {
-            'convert': '/convert [POST]',
-            'status': '/status/<job_id> [GET]',
-            'download': '/download/<filename> [GET]',
-            'health': '/health [GET]'
+            'web': {
+                '/': 'Web UI (HTML)',
+                '/api': 'API documentation (this page)'
+            },
+            'conversion': {
+                '/convert': 'POST - Start conversion job',
+                '/status/<job_id>': 'GET - Check job status',
+                '/download/<filename>': 'GET - Download converted video'
+            },
+            'monitoring': {
+                '/health': 'GET - Health check'
+            }
+        },
+        'usage': {
+            'convert': {
+                'method': 'POST',
+                'url': '/convert',
+                'body': {
+                    'youtube_url': 'https://youtube.com/watch?v=VIDEO_ID',
+                    'start_time': '0:30 (optional)',
+                    'duration': 30
+                }
+            }
         }
     })
 
@@ -221,26 +262,11 @@ def health():
     }), 200
 
 
+# ==================== API ROUTES ====================
+
 @app.route('/convert', methods=['POST'])
 def convert():
-    """
-    Convert YouTube video to TikTok format
-
-    Request JSON:
-        {
-            "youtube_url": "https://youtube.com/watch?v=...",
-            "start_time": "0:30" (optional),
-            "duration": 30 (optional, default 30),
-            "caption": "custom caption" (optional)
-        }
-
-    Returns:
-        {
-            "success": true,
-            "job_id": "uuid",
-            "message": "Processing started"
-        }
-    """
+    """Convert YouTube video to TikTok format (API endpoint)"""
     try:
         # Validate request
         if not request.is_json:
@@ -303,7 +329,7 @@ def convert():
         }), 202
 
     except Exception as e:
-        print(f"❌ /convert error: {str(e)}")
+        print(f"Error in /convert: {str(e)}")
         traceback.print_exc()
         return jsonify({
             'error': 'Server error occurred',
@@ -313,19 +339,7 @@ def convert():
 
 @app.route('/status/<job_id>')
 def get_status(job_id):
-    """
-    Get conversion job status
-
-    Returns:
-        {
-            "job_id": "uuid",
-            "status": "processing|completed|error",
-            "progress": 0-100,
-            "message": "Status message",
-            "video_url": "/download/filename.mp4" (if completed),
-            ...
-        }
-    """
+    """Get conversion job status (API endpoint)"""
     try:
         if not job_id:
             return jsonify({'error': 'job_id is required'}), 400
@@ -342,7 +356,7 @@ def get_status(job_id):
         return jsonify(job), 200
 
     except Exception as e:
-        print(f"❌ /status error: {str(e)}")
+        print(f"Error in /status: {str(e)}")
         return jsonify({
             'error': 'Failed to get status',
             'details': str(e)
@@ -377,7 +391,7 @@ def download_file(filename):
         )
 
     except Exception as e:
-        print(f"❌ /download error: {str(e)}")
+        print(f"Error in /download: {str(e)}")
         return jsonify({'error': f'Download failed: {str(e)}'}), 500
 
 
@@ -385,15 +399,12 @@ def download_file(filename):
 
 def process_video_safe(job_id: str, youtube_url: str, start_time: str,
                        duration: int, caption: str):
-    """
-    Safe wrapper for video processing - NEVER crashes
-    All exceptions caught and reported to job status
-    """
+    """Safe wrapper for video processing - NEVER crashes"""
     try:
         process_video(job_id, youtube_url, start_time, duration, caption)
     except Exception as e:
         error_msg = str(e)
-        print(f"❌ Fatal error in job {job_id}: {error_msg}")
+        print(f"Fatal error in job {job_id}: {error_msg}")
         traceback.print_exc()
 
         job_store.update_job(
@@ -406,9 +417,7 @@ def process_video_safe(job_id: str, youtube_url: str, start_time: str,
 
 def process_video(job_id: str, youtube_url: str, start_time: str,
                   duration: int, caption: str):
-    """
-    Background video processing with comprehensive error handling
-    """
+    """Background video processing with comprehensive error handling"""
 
     def update(status, progress, message, **kwargs):
         """Helper to update job status"""
@@ -435,21 +444,21 @@ def process_video(job_id: str, youtube_url: str, start_time: str,
             update('processing', 30, f'Downloaded: {video_title[:50]}...')
 
         except VideoRestrictionError as e:
-            update('error', 0, f'❌ Video Restricted: {str(e)}')
+            update('error', 0, f'Video Restricted: {str(e)}')
             return
 
         except VideoUnavailableError as e:
-            update('error', 0, f'❌ Video Unavailable: {str(e)}')
+            update('error', 0, f'Video Unavailable: {str(e)}')
             return
 
         except Exception as e:
             error_msg = str(e)
             if 'timeout' in error_msg.lower():
-                update('error', 0, '❌ Download timeout. Try a shorter video.')
+                update('error', 0, 'Download timeout. Try a shorter video.')
             elif 'network' in error_msg.lower() or 'connection' in error_msg.lower():
-                update('error', 0, '❌ Network error. Check your connection.')
+                update('error', 0, 'Network error. Check your connection.')
             else:
-                update('error', 0, f'❌ Download failed: {error_msg}')
+                update('error', 0, f'Download failed: {error_msg}')
             return
 
         # Step 2: Convert to TikTok format
@@ -481,18 +490,18 @@ def process_video(job_id: str, youtube_url: str, start_time: str,
         except Exception as e:
             error_msg = str(e)
             if 'ffmpeg' in error_msg.lower():
-                update('error', 0, '❌ Video conversion failed. FFmpeg error.')
+                update('error', 0, 'Video conversion failed. FFmpeg error.')
             elif 'codec' in error_msg.lower():
-                update('error', 0, '❌ Video format not supported.')
+                update('error', 0, 'Video format not supported.')
             else:
-                update('error', 0, f'❌ Conversion failed: {error_msg}')
+                update('error', 0, f'Conversion failed: {error_msg}')
             return
 
         # Step 3: Success
         update(
             'completed',
             100,
-            '✅ Conversion complete!',
+            'Conversion complete!',
             video_title=video_title,
             filename=output_filename,
             video_url=f'/download/{output_filename}',
@@ -501,20 +510,19 @@ def process_video(job_id: str, youtube_url: str, start_time: str,
         )
 
     except Exception as e:
-        # Catch-all for unexpected errors
         error_msg = str(e)
-        print(f"❌ Unexpected error: {error_msg}")
+        print(f"Unexpected error: {error_msg}")
         traceback.print_exc()
-        update('error', 0, f'❌ Unexpected error: {error_msg}')
+        update('error', 0, f'Unexpected error: {error_msg}')
 
     finally:
         # Cleanup: delete downloaded video (keep converted)
         try:
             if video_path and Path(video_path).exists():
                 Path(video_path).unlink()
-                print(f"🗑️  Cleaned up: {video_path}")
+                print(f"Cleaned up: {video_path}")
         except Exception as e:
-            print(f"⚠️  Cleanup warning: {e}")
+            print(f"Cleanup warning: {e}")
 
 
 # ==================== ERROR HANDLERS ====================
@@ -522,16 +530,31 @@ def process_video(job_id: str, youtube_url: str, start_time: str,
 @app.errorhandler(404)
 def not_found(error):
     """Handle 404 errors"""
-    return jsonify({
-        'error': 'Not found',
-        'message': 'The requested resource does not exist'
-    }), 404
+    if request.path.startswith('/api') or request.path.startswith('/status') or request.path.startswith('/download'):
+        return jsonify({
+            'error': 'Not found',
+            'message': 'The requested resource does not exist'
+        }), 404
+
+    # For web pages, render 404 page or redirect to home
+    try:
+        return render_template('404.html'), 404
+    except:
+        return """
+        <html>
+        <body style="font-family: Arial; text-align: center; padding: 50px;">
+            <h1>404 - Not Found</h1>
+            <p>The page you're looking for doesn't exist.</p>
+            <a href="/">Go Home</a>
+        </body>
+        </html>
+        """, 404
 
 
 @app.errorhandler(500)
 def internal_error(error):
     """Handle 500 errors"""
-    print(f"❌ Internal error: {str(error)}")
+    print(f"Internal error: {str(error)}")
     return jsonify({
         'error': 'Internal server error',
         'message': 'An unexpected error occurred'
@@ -541,7 +564,7 @@ def internal_error(error):
 @app.errorhandler(Exception)
 def handle_exception(e):
     """Catch-all exception handler"""
-    print(f"❌ Unhandled exception: {type(e).__name__}: {str(e)}")
+    print(f"Unhandled exception: {type(e).__name__}: {str(e)}")
     traceback.print_exc()
 
     return jsonify({
@@ -562,11 +585,11 @@ if __name__ == '__main__':
     port = int(os.getenv('PORT', 5000))
 
     print("=" * 60)
-    print("🚀 YouTube to TikTok Converter - Production")
+    print("YouTube to TikTok Converter - Production")
     print("=" * 60)
-    print(f"📦 Downloader: {'✅' if DOWNLOADER_AVAILABLE else '❌'}")
-    print(f"🎬 Converter: {'✅' if CONVERTER_AVAILABLE else '❌'}")
-    print(f"🌐 Server: http://0.0.0.0:{port}")
+    print(f"Downloader: {'OK' if DOWNLOADER_AVAILABLE else 'FAIL'}")
+    print(f"Converter: {'OK' if CONVERTER_AVAILABLE else 'FAIL'}")
+    print(f"Server: http://0.0.0.0:{port}")
     print("=" * 60)
 
     app.run(host='0.0.0.0', port=port, debug=False)
