@@ -1,6 +1,6 @@
 """
 Integrated YouTube Analyzer + Converter with TikTok Auto-Upload
-All-in-one solution on localhost:5000
+Production-ready for Railway deployment
 """
 from flask import Flask, render_template, request, jsonify, send_file, session, redirect, url_for, make_response
 import os
@@ -12,24 +12,49 @@ import uuid
 import hashlib
 import base64
 import secrets
-from googleapiclient.discovery import build
-from googleapiclient.errors import HttpError
-from google_auth_oauthlib.flow import Flow
-from google.oauth2.credentials import Credentials
 from datetime import datetime, timezone
 import math
 import json
 
-# Fix Windows console encoding for Unicode characters
-if sys.platform == 'win32':
-    sys.stdout.reconfigure(encoding='utf-8')
-    sys.stderr.reconfigure(encoding='utf-8')
+# Fix Windows console encoding for Unicode characters (safe for all platforms)
+try:
+    if sys.platform == 'win32':
+        sys.stdout.reconfigure(encoding='utf-8')
+        sys.stderr.reconfigure(encoding='utf-8')
+except:
+    pass
 
-# Import existing modules
-from yt2tik.downloader import download_youtube_video
-from yt2tik.converter import convert_to_tiktok_format
-from yt2tik.caption_gen import generate_caption
-from yt2tik.uploader import TikTokUploader
+# Import Google API libraries with error handling
+try:
+    from googleapiclient.discovery import build
+    from googleapiclient.errors import HttpError
+    from google_auth_oauthlib.flow import Flow
+    from google.oauth2.credentials import Credentials
+    GOOGLE_APIS_AVAILABLE = True
+except ImportError as e:
+    print(f"Warning: Google APIs not available: {e}")
+    GOOGLE_APIS_AVAILABLE = False
+
+# Import existing modules with error handling
+try:
+    from yt2tik.downloader import download_youtube_video
+    from yt2tik.converter import convert_to_tiktok_format
+    from yt2tik.caption_gen import generate_caption
+    from yt2tik.uploader import TikTokUploader
+    YT2TIK_AVAILABLE = True
+except ImportError as e:
+    print(f"Warning: yt2tik modules not fully available: {e}")
+    YT2TIK_AVAILABLE = False
+    # Create dummy functions so the app doesn't crash
+    def download_youtube_video(url):
+        raise Exception("YouTube download functionality not available")
+    def convert_to_tiktok_format(*args, **kwargs):
+        raise Exception("Video conversion functionality not available")
+    def generate_caption(text):
+        return text
+    class TikTokUploader:
+        def upload(self, *args, **kwargs):
+            raise Exception("TikTok upload functionality not available")
 
 load_dotenv()
 
@@ -1215,13 +1240,16 @@ def handle_exception(e):
 
 # ==================== APP INITIALIZATION ====================
 
+# Create required directories (must be outside if __name__ for production servers like gunicorn)
+try:
+    DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+except Exception as e:
+    print(f"Warning: Could not create directories: {e}")
+
 if __name__ == '__main__':
     try:
-        # Create required directories
-        DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
-        OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-
-        # Get port from environment (for Hugging Face Spaces compatibility)
+        # Get port from environment
         port = int(os.getenv('PORT', 5000))
 
         print("=" * 60)
