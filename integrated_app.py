@@ -37,24 +37,34 @@ except ImportError as e:
 
 # Import existing modules with error handling
 try:
-    from yt2tik.downloader import download_youtube_video
-    from yt2tik.converter import convert_to_tiktok_format
+    from yt2tik.downloader_stable import download_youtube_video
+    from yt2tik.converter_stable import convert_to_tiktok_format
     from yt2tik.caption_gen import generate_caption
     from yt2tik.uploader import TikTokUploader
     YT2TIK_AVAILABLE = True
+    print("✅ Using STABLE yt2tik modules (production-ready)")
 except ImportError as e:
-    print(f"Warning: yt2tik modules not fully available: {e}")
-    YT2TIK_AVAILABLE = False
-    # Create dummy functions so the app doesn't crash
-    def download_youtube_video(url):
-        raise Exception("YouTube download functionality not available")
-    def convert_to_tiktok_format(*args, **kwargs):
-        raise Exception("Video conversion functionality not available")
-    def generate_caption(text):
-        return text
-    class TikTokUploader:
-        def upload(self, *args, **kwargs):
-            raise Exception("TikTok upload functionality not available")
+    print(f"Warning: Stable yt2tik modules not available, trying fallback: {e}")
+    try:
+        from yt2tik.downloader import download_youtube_video
+        from yt2tik.converter import convert_to_tiktok_format
+        from yt2tik.caption_gen import generate_caption
+        from yt2tik.uploader import TikTokUploader
+        YT2TIK_AVAILABLE = True
+        print("⚠️  Using original yt2tik modules (not stable version)")
+    except ImportError as e:
+        print(f"Warning: yt2tik modules not fully available: {e}")
+        YT2TIK_AVAILABLE = False
+        # Create dummy functions so the app doesn't crash
+        def download_youtube_video(url):
+            raise Exception("YouTube download functionality not available")
+        def convert_to_tiktok_format(*args, **kwargs):
+            raise Exception("Video conversion functionality not available")
+        def generate_caption(text):
+            return text
+        class TikTokUploader:
+            def upload(self, *args, **kwargs):
+                raise Exception("TikTok upload functionality not available")
 
 load_dotenv()
 
