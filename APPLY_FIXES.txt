@@ -1,0 +1,254 @@
+# PRODUCTION FIXES - Manual Integration Guide
+# Apply these changes to integrated_app.py
+
+## Summary of Changes:
+# 1. Replace jobs dict with JobStore
+# 2. Update /convert endpoint
+# 3. Update /status endpoint
+# 4. Add process_video_safe wrapper
+# 5. Update process_video function
+# 6. Update __main__ block
+
+## ============================================================================
+## CHANGE 1: Line ~450 - Update job creation in /convert endpoint
+## ============================================================================
+
+# FIND (around line 448-455):
+        # Create job
+        job_id = str(uuid.uuid4())
+        jobs[job_id] = {
+            'status': 'processing',
+            'progress': 0,
+            'message': 'Initializing...',
+            'created_at': datetime.now().isoformat()
+        }
+
+# REPLACE WITH:
+        # Create job using JobStore
+        job_id = str(uuid.uuid4())
+        job_store.create_job(job_id)
+        job_store.update_job(job_id, status='queued', progress=0, message='Queued for processing')
+
+        print(f"[JOB] Created: {job_id}")
+
+## ============================================================================
+## CHANGE 2: Line ~462 - Update thread target in /convert endpoint
+## ============================================================================
+
+# FIND (around line 461-463):
+        thread = threading.Thread(
+            target=process_video,
+            args=(job_id, youtube_url, start_time, duration, caption, auto_detect, auto_upload),
+
+# REPLACE WITH:
+        thread = threading.Thread(
+            target=process_video_safe,
+            args=(job_id, youtube_url, start_time, duration, caption, auto_detect, auto_upload),
+
+## ============================================================================
+## CHANGE 3: Line ~468 - Update return statement in /convert endpoint
+## ============================================================================
+
+# FIND (around line 468-471):
+        return jsonify({
+            'success': True,
+            'job_id': job_id,
+            'message': 'Processing started successfully'
+        })
+
+# REPLACE WITH:
+        return jsonify({
+            'success': True,
+            'job_id': job_id,
+            'message': 'Processing started successfully',
+            'status_url': f'/status/{job_id}'
+        }), 202
+
+## ============================================================================
+## CHANGE 4: Line ~475 - Update error handler in /convert endpoint
+## ============================================================================
+
+# FIND (around line 474-479):
+    except Exception as e:
+        error_msg = str(e)
+        print(f"❌ /convert error: {str(e)}")
+        traceback.print_exc()
+        return jsonify({
+            'error': 'Server error occurred',
+            'details': str(e)
+        }), 500
+
+# REPLACE WITH:
+    except Exception as e:
+        error_msg = str(e)
+        print(f"[ERROR] /convert endpoint: {error_msg}")
+        return jsonify({
+            'error': 'Server error occurred',
+            'details': error_msg
+        }), 500
+
+## ============================================================================
+## CHANGE 5: Complete /status endpoint replacement (around line 482-506)
+## ============================================================================
+
+# FIND THE ENTIRE /status FUNCTION:
+@app.route('/status/<job_id>')
+def get_status(job_id):
+    """Get conversion status with timeout handling"""
+    try:
+        if not job_id:
+            return jsonify({'error': 'Job ID is required'}), 400
+
+        if job_id not in jobs:
+            return jsonify({'error': 'Job not found. It may have expired or never existed.'}), 404
+
+        job_data = jobs[job_id]
+
+        # Check if job is stuck (processing for more than 5 minutes)
+        if job_data.get('status') == 'processing':
+            created_at = job_data.get('created_at')
+            if created_at:
+                try:
+                    from datetime import datetime
+                    created_time = datetime.fromisoformat(created_at)
+                    elapsed = (datetime.now() - created_time).total_seconds()
+
+                    if elapsed > 300:  # 5 minutes
+                        job_data['status'] = 'error'
+                        job_data['message'] = 'Processing timeout. Please try again with a shorter video.'
+                        job_data['progress'] = 0
+                except:
+                    pass
+
+        return jsonify(job_data), 200
+
+    except Exception as e:
+        return jsonify({'error': f'Failed to get status: {str(e)}'}), 500
+
+# REPLACE WITH:
+@app.route('/status/<job_id>')
+def get_status(job_id):
+    """Get conversion status with timeout handling"""
+    try:
+        if not job_id:
+            return jsonify({'error': 'Job ID is required'}), 400
+
+        # Get job from JobStore
+        job_data = job_store.get_job(job_id)
+
+        if not job_data:
+            return jsonify({
+                'error': 'Job not found',
+                'job_id': job_id,
+                'message': 'Job may have expired (1 hour TTL) or never existed'
+            }), 404
+
+        return jsonify(job_data), 200
+
+    except Exception as e:
+        print(f"[ERROR] /status endpoint: {str(e)}")
+        return jsonify({
+            'error': 'Failed to get status',
+            'details': str(e)
+        }), 500
+
+## ============================================================================
+## CHANGE 6: Add process_video_safe wrapper BEFORE process_video function
+## ============================================================================
+
+# ADD THIS NEW FUNCTION BEFORE process_video (around line 640):
+
+def process_video_safe(job_id: str, youtube_url: str, start_time: str,
+                       duration: int, caption: str, auto_detect: bool, auto_upload: bool = False):
+    """
+    Safe wrapper for video processing - NEVER crashes
+    All exceptions caught and reported to job status
+    """
+    try:
+        process_video(job_id, youtube_url, start_time, duration, caption, auto_detect, auto_upload)
+    except Exception as e:
+        error_msg = str(e)
+        print(f"[FATAL] Job {job_id} crashed: {error_msg}")
+
+        try:
+            import traceback
+            traceback.print_exc()
+        except:
+            pass
+
+        job_store.update_job(
+            job_id,
+            status='error',
+            progress=0,
+            message=f'Fatal error: {error_msg}'
+        )
+
+## ============================================================================
+## CHANGE 7: Update process_video function - Replace jobs[] with job_store
+## ============================================================================
+
+# IN process_video function (starting around line 645):
+
+# FIND ALL INSTANCES OF:
+        jobs[job_id] = {
+            'status': status,
+            'progress': progress,
+            'message': message
+        }
+
+# REPLACE WITH:
+        job_store.update_job(job_id, status=status, progress=progress, message=message)
+
+# SPECIFICALLY:
+# 1. Line ~650: update_job_status function needs to use job_store
+# 2. Line ~714: Success case needs to use job_store.update_job
+# 3. Line ~726: Video info storage needs job_store
+
+## ============================================================================
+## CHANGE 8: Update __main__ block (around line 1260-1302)
+## ============================================================================
+
+# FIND (in __main__ block):
+if __name__ == '__main__':
+    try:
+        # Get port from environment
+        port = int(os.getenv('PORT', 5000))
+
+        print("=" * 60)
+        print("🚀 Integrated YouTube Analyzer + Converter + TikTok Upload")
+        # ... rest of startup code
+
+# ADD THESE LINES AFTER "try:" and BEFORE port assignment:
+        # Cleanup old downloads on startup
+        try:
+            cleanup_old_downloads(days=1)
+            print("✅ Cleaned up old downloads")
+        except Exception as e:
+            print(f"⚠️  Cleanup warning: {e}")
+
+## ============================================================================
+## VERIFICATION CHECKLIST
+## ============================================================================
+
+After making changes, verify:
+[ ] No more references to jobs[] dict (search for "jobs[")
+[ ] All use job_store.create_job(), job_store.update_job(), job_store.get_job()
+[ ] /convert calls process_video_safe (not process_video directly)
+[ ] /status returns 404 with proper JSON (not crash)
+[ ] __main__ block calls cleanup_old_downloads()
+[ ] No import errors (yt2tik.downloader_fixed exists)
+
+## ============================================================================
+## TEST AFTER CHANGES
+## ============================================================================
+
+python integrated_app.py
+
+Should see:
+✅ Using fixed production downloader with retry logic
+✅ Using production JobStore (thread-safe)
+✅ Cleaned up old downloads
+
+Then test endpoints:
+curl http://localhost:7860/health
+curl -X POST http://localhost:7860/convert -H "Content-Type: application/json" -d '{"youtube_url":"https://youtube.com/watch?v=dQw4w9WgXcQ","duration":30}'

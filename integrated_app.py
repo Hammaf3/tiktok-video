@@ -37,26 +37,61 @@ except ImportError as e:
 
 # Import existing modules with error handling
 try:
-    from yt2tik.downloader import download_youtube_video
+    from yt2tik.downloader_fixed import download_youtube_video, cleanup_old_downloads
     from yt2tik.converter import convert_to_tiktok_format
     from yt2tik.caption_gen import generate_caption
     from yt2tik.uploader import TikTokUploader
     YT2TIK_AVAILABLE = True
+    print("✅ Using fixed production downloader with retry logic")
 except ImportError as e:
-    print(f"Warning: yt2tik modules not fully available: {e}")
-    YT2TIK_AVAILABLE = False
-    # Create dummy functions so the app doesn't crash
-    def download_youtube_video(url):
-        raise Exception("YouTube download functionality not available")
-    def convert_to_tiktok_format(*args, **kwargs):
-        raise Exception("Video conversion functionality not available")
-    def generate_caption(text):
-        return text
-    class TikTokUploader:
-        def upload(self, *args, **kwargs):
-            raise Exception("TikTok upload functionality not available")
+    print(f"⚠️  Fixed downloader not available, trying original: {e}")
+    try:
+        from yt2tik.downloader import download_youtube_video
+        from yt2tik.converter import convert_to_tiktok_format
+        from yt2tik.caption_gen import generate_caption
+        from yt2tik.uploader import TikTokUploader
+        YT2TIK_AVAILABLE = True
+        cleanup_old_downloads = lambda days: None  # Dummy function
+        print("⚠️  Using original downloader (not production-ready)")
+    except ImportError as e:
+        print(f"Warning: yt2tik modules not fully available: {e}")
+        YT2TIK_AVAILABLE = False
+        cleanup_old_downloads = lambda days: None
+        # Create dummy functions so the app doesn't crash
+        def download_youtube_video(url):
+            raise Exception("YouTube download functionality not available")
+        def convert_to_tiktok_format(*args, **kwargs):
+            raise Exception("Video conversion functionality not available")
+        def generate_caption(text):
+            return text
+        class TikTokUploader:
+            def upload(self, *args, **kwargs):
+                raise Exception("TikTok upload functionality not available")
 
 load_dotenv()
+
+# Import JobStore
+try:
+    from job_store import JobStore
+    print("✅ Using production JobStore (thread-safe)")
+except ImportError:
+    print("⚠️  JobStore not found, using simple dict")
+    # Fallback to simple dict if JobStore not available
+    class JobStore:
+        def __init__(self, **kwargs):
+            self.jobs = {}
+        def create_job(self, job_id):
+            self.jobs[job_id] = {'job_id': job_id, 'status': 'pending', 'progress': 0, 'message': 'Created'}
+            return self.jobs[job_id]
+        def update_job(self, job_id, status=None, progress=None, message=None, **kwargs):
+            if job_id not in self.jobs:
+                self.jobs[job_id] = {'job_id': job_id}
+            if status: self.jobs[job_id]['status'] = status
+            if progress is not None: self.jobs[job_id]['progress'] = progress
+            if message: self.jobs[job_id]['message'] = message
+            self.jobs[job_id].update(kwargs)
+        def get_job(self, job_id):
+            return self.jobs.get(job_id)
 
 # Set defaults for optional environment variables to prevent crashes
 os.environ.setdefault('FLASK_SECRET_KEY', 'default-secret-change-in-production')
@@ -74,8 +109,8 @@ BASE_DIR = Path(__file__).parent
 OUTPUT_DIR = BASE_DIR / 'tmp' / 'yt2tik' / 'output'
 DOWNLOAD_DIR = BASE_DIR / 'tmp' / 'yt2tik' / 'downloads'
 
-# Store job status
-jobs = {}
+# Initialize JobStore (replaces simple dict)
+job_store = JobStore(ttl_seconds=3600, max_jobs=1000)
 
 # YouTube OAuth Scopes
 YOUTUBE_SCOPES = [
