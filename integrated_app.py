@@ -445,21 +445,19 @@ def convert():
         if auto_upload and not session.get('tiktok_connected'):
             return jsonify({'error': 'Please connect your TikTok account first to enable auto-upload'}), 400
 
-        # Create job
+        # Create job using JobStore
         job_id = str(uuid.uuid4())
-        jobs[job_id] = {
-            'status': 'processing',
-            'progress': 0,
-            'message': 'Initializing...',
-            'created_at': datetime.now().isoformat()
-        }
+        job_store.create_job(job_id)
+        job_store.update_job(job_id, status='queued', progress=0, message='Queued for processing')
+
+        print(f"[JOB] Created: {job_id}")
 
         # Store job_id in session
         session['current_job_id'] = job_id
 
         # Start background processing
         thread = threading.Thread(
-            target=process_video,
+            target=process_video_safe,
             args=(job_id, youtube_url, start_time, duration, caption, auto_detect, auto_upload),
             daemon=True  # Daemon thread will exit when main program exits
         )
@@ -468,8 +466,9 @@ def convert():
         return jsonify({
             'success': True,
             'job_id': job_id,
-            'message': 'Processing started successfully'
-        })
+            'message': 'Processing started successfully',
+            'status_url': f'/status/{job_id}'
+        }), 202
 
     except Exception as e:
         error_msg = str(e)
@@ -484,31 +483,24 @@ def get_status(job_id):
         if not job_id:
             return jsonify({'error': 'Job ID is required'}), 400
 
-        if job_id not in jobs:
-            return jsonify({'error': 'Job not found. It may have expired or never existed.'}), 404
+        # Get job from JobStore
+        job_data = job_store.get_job(job_id)
 
-        job_data = jobs[job_id]
+        if not job_data:
+            return jsonify({
+                'error': 'Job not found',
+                'job_id': job_id,
+                'message': 'Job may have expired (1 hour TTL) or never existed'
+            }), 404
 
-        # Check if job is stuck (processing for more than 5 minutes)
-        if job_data.get('status') == 'processing':
-            created_at = job_data.get('created_at')
-            if created_at:
-                try:
-                    from datetime import datetime
-                    created_time = datetime.fromisoformat(created_at)
-                    elapsed = (datetime.now() - created_time).total_seconds()
-
-                    if elapsed > 300:  # 5 minutes
-                        job_data['status'] = 'error'
-                        job_data['message'] = 'Processing timeout. Please try again with a shorter video.'
-                        job_data['progress'] = 0
-                except:
-                    pass
-
-        return jsonify(job_data)
+        return jsonify(job_data), 200
 
     except Exception as e:
-        return jsonify({'error': f'Failed to get status: {str(e)}'}), 500
+        print(f"[ERROR] /status endpoint: {str(e)}")
+        return jsonify({
+            'error': 'Failed to get status',
+            'details': str(e)
+        }), 500
 
 
 @app.route('/video_result/<filename>')
@@ -642,6 +634,34 @@ def upload_to_tiktok():
         return jsonify({'error': f'Upload failed: {error_msg}'}), 500
 
 
+
+
+def process_video_safe(job_id: str, youtube_url: str, start_time: str,
+                       duration: int, caption: str, auto_detect: bool, auto_upload: bool = False):
+    """
+    Safe wrapper for video processing - NEVER crashes
+    All exceptions caught and reported to job status
+    """
+    try:
+        process_video(job_id, youtube_url, start_time, duration, caption, auto_detect, auto_upload)
+    except Exception as e:
+        error_msg = str(e)
+        print(f"[FATAL] Job {job_id} crashed: {error_msg}")
+
+        try:
+            import traceback
+            traceback.print_exc()
+        except:
+            pass
+
+        job_store.update_job(
+            job_id,
+            status='error',
+            progress=0,
+            message=f'Fatal error: {error_msg}'
+        )
+
+
 def process_video(job_id, youtube_url, start_time, duration, caption, auto_detect, auto_upload=False):
     """Background video processing with comprehensive error handling"""
 
@@ -659,11 +679,7 @@ def process_video(job_id, youtube_url, start_time, duration, caption, auto_detec
     def update_job_status(status, progress, message):
         """Update job status safely"""
         try:
-            jobs[job_id] = {
-                'status': status,
-                'progress': progress,
-                'message': message
-            }
+            job_store.update_job(job_id, status=status, progress=progress, message=message)
         except Exception as e:
             safe_print(f"Failed to update job status: {str(e)}")
 
@@ -746,22 +762,23 @@ def process_video(job_id, youtube_url, start_time, duration, caption, auto_detec
         try:
             update_job_status('processing', 90, 'Finalizing...')
 
-            jobs[job_id] = {
-                'status': 'completed',
-                'progress': 100,
-                'message': 'Conversion complete!',
-                'video_title': video_title,
-                'duration': duration,
-                'filename': output_filename,
-                'video_url': f'/download/{output_filename}',
-                'redirect_url': f'/video_result/{output_filename}'
-            }
+            job_store.update_job(
+                job_id,
+                status='completed',
+                progress=100,
+                message='Conversion complete!',
+                video_title=video_title,
+                duration=duration,
+                filename=output_filename,
+                video_url=f'/download/{output_filename}',
+                redirect_url=f'/video_result/{output_filename}'
+            )
 
-            # Store video info for result page
-            jobs[f'video_{output_filename}'] = {
-                'title': video_title,
-                'duration': duration
-            }
+            # Store video info for result page (using job_store)
+            job_store.create_job(f'video_{output_filename}')
+            job_store.update_job(f'video_{output_filename}',
+                                title=video_title,
+                                duration=duration)
 
             safe_print(f"Processing complete for job {job_id}")
 
