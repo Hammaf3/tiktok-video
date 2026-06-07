@@ -1,0 +1,40 @@
+# Production Requirements for Railway Deployment
+# Updated with enhanced error handling and stability
+
+# Web Framework
+Flask==3.0.0
+Werkzeug==3.0.0
+
+# Production WSGI Server
+gunicorn==21.2.0
+
+# YouTube Downloading - Latest version with bug fixes
+yt-dlp>=2024.12.23
+
+# Video Processing
+ffmpeg-python==0.2.0
+
+# HTTP Requests
+requests>=2.32.2
+
+# Environment Variables
+python-dotenv==1.0.1
+
+# YouTube Data API
+google-api-python-client==2.134.0
+google-auth-httplib2==0.2.0
+google-auth-oauthlib==1.2.0
+
+# Data Processing
+pandas==2.2.2
+
+# Date Handling
+python-dateutil==2.9.0
+
+# CLI and Progress Bars
+rich==13.7.1
+tqdm==4.66.4
+
+# Additional Dependencies for Production
+certifi>=2023.7.22  # SSL certificate handling
+urllib3>=2.0.0      # HTTP library with retry support

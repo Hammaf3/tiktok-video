@@ -1,0 +1,48 @@
+# Production Dockerfile for Railway / Hugging Face Spaces
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    ffmpeg \
+    git \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements
+COPY requirements.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt && \
+    pip install --no-cache-dir --upgrade yt-dlp
+
+# Copy application
+COPY . .
+
+# Create required directories
+RUN mkdir -p tmp/yt2tik/downloads tmp/yt2tik/output logs
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+
+# Railway/Hugging Face compatible ports
+EXPOSE 7860 8080
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:${PORT:-7860}/health || exit 1
+
+# Run with gunicorn (production server)
+CMD gunicorn app_production_v2:app \
+    --bind 0.0.0.0:${PORT:-7860} \
+    --workers 2 \
+    --threads 4 \
+    --timeout 600 \
+    --worker-class sync \
+    --max-requests 1000 \
+    --max-requests-jitter 50 \
+    --access-logfile - \
+    --error-logfile - \
+    --log-level info

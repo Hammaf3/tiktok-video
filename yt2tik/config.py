@@ -1,19 +1,34 @@
 """
 Configuration constants for yt2tik
+Production-ready with Railway support
 """
 import os
 from pathlib import Path
 
-# Directories
+# Directories - Use /tmp on Railway for ephemeral storage
 BASE_DIR = Path(__file__).parent.parent
-DOWNLOAD_DIR = BASE_DIR / "tmp" / "yt2tik" / "downloads"
-OUTPUT_DIR = BASE_DIR / "tmp" / "yt2tik" / "output"
-LOG_DIR = BASE_DIR / "logs"
+
+# Detect Railway environment
+IS_RAILWAY = bool(os.getenv('RAILWAY_ENVIRONMENT') or os.getenv('RAILWAY_PROJECT_ID'))
+
+if IS_RAILWAY:
+    # Railway: Use /tmp (writable ephemeral storage)
+    DOWNLOAD_DIR = Path('/tmp') / "yt2tik" / "downloads"
+    OUTPUT_DIR = Path('/tmp') / "yt2tik" / "output"
+    LOG_DIR = Path('/tmp') / "logs"
+else:
+    # Local: Use project directory
+    DOWNLOAD_DIR = BASE_DIR / "tmp" / "yt2tik" / "downloads"
+    OUTPUT_DIR = BASE_DIR / "tmp" / "yt2tik" / "output"
+    LOG_DIR = BASE_DIR / "logs"
 
 # Create directories if they don't exist
-DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
-OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-LOG_DIR.mkdir(parents=True, exist_ok=True)
+try:
+    DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
+except Exception as e:
+    print(f"Warning: Could not create directories: {e}")
 
 # TikTok API Configuration
 TIKTOK_API_BASE = "https://open.tiktokapis.com/v2"

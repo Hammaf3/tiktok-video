@@ -1,0 +1,63 @@
+# Production Dockerfile for Railway Deployment
+# Optimized for yt-dlp with FFmpeg and proper error handling
+
+FROM python:3.12-slim
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies
+# - ffmpeg: Required for video processing
+# - curl: For health checks
+# - ca-certificates: For HTTPS connections
+RUN apt-get update && apt-get install -y \
+    ffmpeg \
+    curl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && ffmpeg -version
+
+# Copy requirements first for better Docker layer caching
+COPY requirements.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt && \
+    pip install --no-cache-dir --upgrade yt-dlp
+
+# Verify yt-dlp installation
+RUN yt-dlp --version
+
+# Copy application code
+COPY . .
+
+# Create necessary directories with proper permissions
+RUN mkdir -p /tmp/yt2tik/downloads /tmp/yt2tik/output logs && \
+    chmod -R 755 /tmp/yt2tik
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    FLASK_APP=integrated_app.py \
+    PYTHONDONTWRITEBYTECODE=1
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:${PORT:-8080}/health || exit 1
+
+# Railway dynamically assigns PORT
+EXPOSE 8080
+
+# Run with gunicorn
+# - Workers: 2 (good for Railway's resources)
+# - Timeout: 300s (5 minutes for video processing)
+# - Access log: stdout
+# - Error log: stderr
+CMD gunicorn integrated_app:app \
+    --bind 0.0.0.0:${PORT:-8080} \
+    --workers 2 \
+    --worker-class sync \
+    --timeout 300 \
+    --keep-alive 5 \
+    --access-logfile - \
+    --error-logfile - \
+    --log-level info

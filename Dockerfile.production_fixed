@@ -1,0 +1,44 @@
+# PRODUCTION Dockerfile - Railway/Hugging Face Ready
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    ffmpeg \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements and install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Upgrade yt-dlp to latest (critical for stability)
+RUN pip install --no-cache-dir --upgrade yt-dlp
+
+# Copy application code
+COPY . .
+
+# Create necessary directories
+RUN mkdir -p tmp/yt2tik/downloads tmp/yt2tik/output logs
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+ENV FLASK_APP=app_production.py
+
+# Expose port (Railway/HF will override with $PORT)
+EXPOSE 7860
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:${PORT:-7860}/health || exit 1
+
+# Run with gunicorn (production WSGI server)
+CMD gunicorn app_production:app \
+    --bind 0.0.0.0:${PORT:-7860} \
+    --workers 2 \
+    --threads 4 \
+    --timeout 300 \
+    --access-logfile - \
+    --error-logfile - \
+    --log-level info

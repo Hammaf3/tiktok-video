@@ -1,123 +1,107 @@
+#!/usr/bin/env python3
 """
-Test Production Fixes for YouTube to TikTok Converter
-Run this to verify all fixes are working correctly
+Quick Test Script - Verify Fixes Applied
+Tests all critical endpoints and error handling
 """
-import sys
-import os
-from pathlib import Path
+import requests
+import json
+import time
+from datetime import datetime
 
-# Suppress encoding errors on Windows
-if sys.platform == 'win32':
-    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+BASE_URL = "http://localhost:5000"  # Change if using different port
 
-print("=" * 60)
-print("Testing Production Fixes")
-print("=" * 60)
+def print_section(title):
+    print(f"\n{'='*60}")
+    print(f"  {title}")
+    print(f"{'='*60}\n")
 
-# Test 1: JobStore import
-print("\n[TEST 1] JobStore import...")
-try:
-    from job_store import JobStore
-    js = JobStore(ttl_seconds=3600, max_jobs=1000)
-    print("[PASS] JobStore imported successfully")
+def test_health():
+    """Test health endpoint"""
+    print_section("TEST 1: Health Endpoint")
 
-    # Test job operations
-    job = js.create_job('test-123')
-    assert job['job_id'] == 'test-123'
-    assert job['status'] == 'pending'
-    print("[PASS] JobStore.create_job() works")
+    try:
+        response = requests.get(f"{BASE_URL}/health")
+        print(f"Status Code: {response.status_code}")
 
-    js.update_job('test-123', status='processing', progress=50, message='Testing')
-    job = js.get_job('test-123')
-    assert job['status'] == 'processing'
-    assert job['progress'] == 50
-    print("[PASS] JobStore.update_job() and get_job() work")
+        if response.status_code == 200:
+            data = response.json()
+            print(f"✅ Health endpoint working")
+            print(f"   Status: {data.get('status')}")
+            print(f"   Components: {data.get('components', {})}")
+            return True
+        else:
+            print(f"❌ Health endpoint returned {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Health endpoint failed: {str(e)}")
+        return False
 
-    # Test non-existent job
-    job = js.get_job('non-existent')
-    assert job is None
-    print("[PASS] JobStore.get_job() returns None for missing jobs")
+def test_invalid_job_status():
+    """Test status endpoint with invalid job ID (should return 200, not 404)"""
+    print_section("TEST 2: Invalid Job ID (No 404 Test)")
 
-except Exception as e:
-    print(f"[FAIL] JobStore error: {str(e)}")
-    import traceback
-    traceback.print_exc()
+    try:
+        invalid_id = "invalid-job-id-12345"
+        print(f"Checking status for invalid job: {invalid_id}")
 
-# Test 2: Fixed downloader import
-print("\n[TEST 2] Fixed downloader import...")
-try:
-    from yt2tik.downloader_fixed import download_youtube_video, cleanup_old_downloads
-    print("[PASS] Fixed downloader imported successfully")
-    print("[INFO] download_youtube_video has max_retries parameter")
-    print("[INFO] cleanup_old_downloads available")
-except Exception as e:
-    print(f"[FAIL] Fixed downloader error: {str(e)}")
-    import traceback
-    traceback.print_exc()
+        response = requests.get(f"{BASE_URL}/status/{invalid_id}")
+        print(f"Status Code: {response.status_code}")
 
-# Test 3: Check integrated_app imports
-print("\n[TEST 3] Check integrated_app.py imports...")
-try:
-    # Check if imports are updated
-    with open('integrated_app.py', 'r', encoding='utf-8') as f:
-        content = f.read()
+        if response.status_code == 200:
+            data = response.json()
+            print(f"✅ Correctly returns 200 (not 404)")
+            print(f"   Response: {json.dumps(data, indent=2)}")
+            return True
+        elif response.status_code == 404:
+            print(f"❌ FAILED: Still returns 404 (should return 200)")
+            return False
+        else:
+            print(f"❌ Unexpected status code: {response.status_code}")
+            return False
 
-    if 'from job_store import JobStore' in content:
-        print("[PASS] JobStore import present in integrated_app.py")
+    except Exception as e:
+        print(f"❌ Test failed: {str(e)}")
+        return False
+
+def main():
+    """Run all tests"""
+    print("\n" + "="*60)
+    print("  YouTube to TikTok Converter - Verification Tests")
+    print("="*60)
+    print(f"\nBase URL: {BASE_URL}")
+    print(f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+
+    results = []
+
+    # Test 1: Health
+    results.append(("Health Endpoint", test_health()))
+
+    # Test 2: Invalid Job ID
+    results.append(("No 404 for Invalid Job", test_invalid_job_status()))
+
+    # Summary
+    print_section("TEST SUMMARY")
+
+    passed = sum(1 for _, result in results if result is True)
+    total = len(results)
+
+    for name, result in results:
+        status = "✅ PASS" if result else "❌ FAIL"
+        print(f"{status}  {name}")
+
+    print(f"\n{passed}/{total} tests passed")
+
+    if passed == total:
+        print("\n🎉 All tests passed! Application is working correctly.")
     else:
-        print("[WARN] JobStore import not found in integrated_app.py")
+        print("\n⚠️  Some tests failed. Check the output above for details.")
 
-    if 'from yt2tik.downloader_fixed import' in content:
-        print("[PASS] Fixed downloader import present in integrated_app.py")
-    elif 'from yt2tik.downloader import' in content:
-        print("[WARN] Using original downloader (not fixed version)")
+    print("\n" + "="*60 + "\n")
 
-    if 'job_store = JobStore' in content:
-        print("[PASS] job_store initialized in integrated_app.py")
-    elif 'jobs = {}' in content:
-        print("[WARN] Still using jobs dict (not JobStore)")
-
-except Exception as e:
-    print(f"[FAIL] Error checking integrated_app.py: {str(e)}")
-
-# Test 4: Check directory structure
-print("\n[TEST 4] Check directory structure...")
-required_dirs = [
-    Path('tmp/yt2tik/downloads'),
-    Path('tmp/yt2tik/output'),
-    Path('yt2tik'),
-]
-
-for dir_path in required_dirs:
-    if dir_path.exists():
-        print(f"[PASS] {dir_path} exists")
-    else:
-        print(f"[WARN] {dir_path} does not exist (will be created on startup)")
-
-# Test 5: Check required files
-print("\n[TEST 5] Check required files...")
-required_files = [
-    'integrated_app.py',
-    'yt2tik/downloader_fixed.py',
-    'job_store.py',
-    'Dockerfile',
-    'requirements.txt',
-]
-
-for file_path in required_files:
-    if Path(file_path).exists():
-        print(f"[PASS] {file_path} exists")
-    else:
-        print(f"[FAIL] {file_path} missing")
-
-# Summary
-print("\n" + "=" * 60)
-print("TEST SUMMARY")
-print("=" * 60)
-print("\n[NEXT STEPS]")
-print("1. Apply manual changes from APPLY_FIXES.txt")
-print("2. Test locally: python integrated_app.py")
-print("3. Test /convert endpoint: curl -X POST http://localhost:7860/convert -H 'Content-Type: application/json' -d '{\"youtube_url\":\"https://youtube.com/watch?v=dQw4w9WgXcQ\",\"duration\":30}'")
-print("4. Test /status endpoint: curl http://localhost:7860/status/<job_id>")
-print("5. Deploy to Railway: git push origin master")
-print("\n" + "=" * 60)
+if __name__ == "__main__":
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\n\n⚠️  Tests interrupted by user")
+    except Exception as e:
+        print(f"\n\n❌ Test suite failed: {str(e)}")

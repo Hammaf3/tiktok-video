@@ -1,0 +1,16 @@
+================================================================================
+COPY THIS COMMAND - Replace YOUR_TOKEN with your HF token
+================================================================================
+
+git push https://Hammaf3213:YOUR_TOKEN@huggingface.co/spaces/Hammaf3213/youtube master
+
+================================================================================
+Get token here: https://huggingface.co/settings/tokens
+================================================================================
+
+Example (with your real token):
+git push https://Hammaf3213:hf_AbCdEf123456XyZ@huggingface.co/spaces/Hammaf3213/youtube master
+
+================================================================================
+Run this command in: C:\Users\Faraz\Desktop\tiktok video uploader
+================================================================================

@@ -1,0 +1,94 @@
+================================================================================
+AUTHENTICATION NEEDED - FINAL PUSH COMMAND
+================================================================================
+
+Bhai, sab ready hai! Bas tumhe ye ek command run karni hai apne credentials ke saath.
+
+================================================================================
+STEP-BY-STEP (Bahut Easy!)
+================================================================================
+
+STEP 1: Token Lo
+-----------------
+1. Ye link kholo: https://huggingface.co/settings/tokens
+2. "New token" button pe click karo
+3. Token name: kuch bhi (e.g., "deploy")
+4. Role: "write" select karo
+5. "Generate token" button click karo
+6. Token COPY karo (ye "hf_" se start hoga)
+
+STEP 2: Push Command Run Karo
+------------------------------
+Neeche wala command copy karo aur YOUR_TOKEN ki jagah apna token paste karo:
+
+git push https://Hammaf3213:YOUR_TOKEN@huggingface.co/spaces/Hammaf3213/youtube master
+
+Example (tumhare token ke saath):
+git push https://Hammaf3213:hf_abcdef123456xyz@huggingface.co/spaces/Hammaf3213/youtube master
+
+STEP 3: Enter Press Karo
+-------------------------
+Command run hone lagegi. 30-60 seconds mein complete ho jayegi.
+
+================================================================================
+ALTERNATIVE: Manual Upload (Agar Command Se Problem Ho)
+================================================================================
+
+1. https://huggingface.co/spaces/Hammaf3213/youtube kholo
+
+2. "Files and versions" tab pe click karo
+
+3. "Add file" → "Upload files" click karo
+
+4. In files ko drag karo:
+   - Dockerfile
+   - requirements.txt
+   - README.md
+   - integrated_app.py
+   - .dockerignore
+   - yt2tik folder (pura folder drag karo)
+   - templates folder (pura folder drag karo)
+
+5. "Commit to main" click karo
+
+DONE! Build start ho jayega automatically.
+
+================================================================================
+FILES LOCATION (Drag karne ke liye)
+================================================================================
+
+Location: C:\Users\Faraz\Desktop\tiktok video uploader
+
+Files ready:
+✓ Dockerfile
+✓ requirements.txt
+✓ README.md
+✓ integrated_app.py
+✓ .dockerignore
+✓ yt2tik/ (folder)
+✓ templates/ (folder)
+
+================================================================================
+AFTER PUSH/UPLOAD (10 minutes build time)
+================================================================================
+
+1. Visit: https://huggingface.co/spaces/Hammaf3213/youtube
+2. "Logs" tab check karo - "Building..." dikhe ga
+3. 8-10 minutes wait karo
+4. Settings mein environment variables add karo:
+   - YOUTUBE_API_KEY
+   - FLASK_SECRET_KEY
+5. App live ho jayega: https://hammaf3213-youtube.hf.space
+
+================================================================================
+QUICK COPY-PASTE COMMAND
+================================================================================
+
+# Replace YOUR_TOKEN with your actual Hugging Face token
+git push https://Hammaf3213:YOUR_TOKEN@huggingface.co/spaces/Hammaf3213/youtube master
+
+================================================================================
+TOKEN LINK: https://huggingface.co/settings/tokens
+================================================================================
+
+Bhai bas token lo aur command run karo. 2 minutes ka kaam hai!
