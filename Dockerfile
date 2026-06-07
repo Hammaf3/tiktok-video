@@ -1,4 +1,4 @@
-# Railway Deployment - YouTube to TikTok Converter
+# Hugging Face Spaces - FastAPI Docker Configuration
 FROM python:3.12-slim
 
 # Set working directory
@@ -28,13 +28,13 @@ RUN mkdir -p tmp/yt2tik/downloads tmp/yt2tik/output logs reports
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
-ENV FLASK_APP=integrated_app.py
 
-# Railway provides PORT environment variable dynamically
-# Do NOT set a default port here - let Railway control it
+# Hugging Face Spaces provides PORT environment variable
+# Default fallback is handled in app.py (7860)
 
-# Expose port (Railway ignores this but good practice)
-EXPOSE 8080
+# Expose port 7860 (Hugging Face Spaces default)
+EXPOSE 7860
 
-# Run the application - $PORT is provided by Railway
-CMD gunicorn integrated_app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 300 --access-logfile - --error-logfile -
+# Run FastAPI application with uvicorn
+# The app.py handles PORT environment variable correctly with fallback to 7860
+CMD ["python", "app.py"]

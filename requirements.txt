@@ -27,9 +27,11 @@ pandas==2.2.2
 # Utilities
 python-dateutil==2.9.0
 
-# Web framework
+# Web frameworks
 Flask==3.0.0
 Werkzeug==3.0.0
+fastapi==0.115.0
+uvicorn[standard]==0.32.0
 
-# Production WSGI server
+# Production servers
 gunicorn==21.2.0
