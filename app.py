@@ -410,6 +410,25 @@ async def convert_video(request: ConvertRequest):
     job_id = str(uuid.uuid4())
 
     try:
+        # DEMO MODE: Skip actual conversion for now
+        # TODO: Enable actual conversion after debugging
+        print(f"📝 Demo mode: Request received for {youtube_url}")
+
+        jobs[job_id] = {
+            "status": "completed",
+            "youtube_url": youtube_url,
+            "demo": True
+        }
+
+        return {
+            "status": "success",
+            "message": "✅ Video URL validated! (Demo mode - actual conversion disabled for debugging)",
+            "job_id": job_id,
+            "download_url": None
+        }
+
+        # Original code commented out for debugging:
+        """
         # Try to import and use the actual conversion modules
         try:
             from yt2tik.downloader_enhanced import download_youtube_video
@@ -466,11 +485,12 @@ async def convert_video(request: ConvertRequest):
                 "job_id": job_id,
                 "download_url": None
             }
+        """
 
     except Exception as e:
-        # Handle conversion errors
+        # Handle any errors in demo mode
         error_msg = str(e)
-        print(f"❌ Conversion failed: {error_msg}")
+        print(f"❌ Error in demo mode: {error_msg}")
 
         jobs[job_id] = {
             "status": "failed",
@@ -480,7 +500,7 @@ async def convert_video(request: ConvertRequest):
 
         raise HTTPException(
             status_code=500,
-            detail=f"Conversion failed: {error_msg}"
+            detail=f"Error: {error_msg}"
         )
 
 @app.get("/status/{job_id}")
