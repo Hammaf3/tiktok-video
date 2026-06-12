@@ -1,4 +1,4 @@
-# Hugging Face Spaces - FastAPI Docker Configuration
+# Hugging Face Spaces - FastAPI Application with Embedded Frontend
 FROM python:3.12-slim
 
 # Set working directory
@@ -30,11 +30,11 @@ RUN mkdir -p tmp/yt2tik/downloads tmp/yt2tik/output logs reports
 ENV PYTHONUNBUFFERED=1
 
 # Hugging Face Spaces provides PORT environment variable
-# Default fallback is handled in app.py (7860)
+# app.py handles PORT with fallback to 7860
 
 # Expose port 7860 (Hugging Face Spaces default)
 EXPOSE 7860
 
-# Run FastAPI application with uvicorn
-# The app.py handles PORT environment variable correctly with fallback to 7860
+# Run FastAPI application
+# app.py has proper PORT handling built-in
 CMD ["python", "app.py"]
