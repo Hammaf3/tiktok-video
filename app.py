@@ -410,26 +410,9 @@ async def convert_video(request: ConvertRequest):
     job_id = str(uuid.uuid4())
 
     try:
-        # DEMO MODE: Skip actual conversion for now
-        # TODO: Enable actual conversion after debugging
-        print(f"📝 Demo mode: Request received for {youtube_url}")
-
-        jobs[job_id] = {
-            "status": "completed",
-            "youtube_url": youtube_url,
-            "demo": True
-        }
-
-        return {
-            "status": "success",
-            "message": "✅ Video URL validated! (Demo mode - actual conversion disabled for debugging)",
-            "job_id": job_id,
-            "download_url": None
-        }
-
-        # Original code commented out for debugging:
-        """
         # Try to import and use the actual conversion modules
+        print(f"📥 Starting conversion for: {youtube_url}")
+
         try:
             from yt2tik.downloader_enhanced import download_youtube_video
             from yt2tik.converter import convert_to_tiktok_format
@@ -445,12 +428,16 @@ async def convert_video(request: ConvertRequest):
             if not video_path or not Path(video_path).exists():
                 raise Exception("Failed to download video")
 
+            print(f"✅ Download complete: {video_path}")
+
             # Convert to TikTok format
             print(f"🔄 Converting to TikTok format...")
             output_path = convert_to_tiktok_format(video_path, str(output_dir))
 
             if not output_path or not Path(output_path).exists():
                 raise Exception("Failed to convert video")
+
+            print(f"✅ Conversion complete: {output_path}")
 
             # Store job result
             jobs[job_id] = {
@@ -469,38 +456,48 @@ async def convert_video(request: ConvertRequest):
             }
 
         except ImportError as e:
-            # Modules not available - return mock response
-            print(f"⚠️ Conversion modules not available: {e}")
-            print(f"📝 Mock conversion for: {youtube_url}")
+            # Modules not available - return informative error
+            error_msg = f"Conversion modules not available: {str(e)}"
+            print(f"⚠️ {error_msg}")
 
             jobs[job_id] = {
-                "status": "completed",
-                "youtube_url": youtube_url,
-                "mock": True
+                "status": "failed",
+                "error": error_msg,
+                "youtube_url": youtube_url
             }
 
-            return {
-                "status": "success",
-                "message": "Video conversion queued! (Demo mode - actual conversion modules not loaded)",
-                "job_id": job_id,
-                "download_url": None
-            }
-        """
+            raise HTTPException(
+                status_code=500,
+                detail=error_msg
+            )
 
+        except Exception as e:
+            # Handle download/conversion errors
+            error_msg = str(e)
+            print(f"❌ Conversion error: {error_msg}")
+
+            jobs[job_id] = {
+                "status": "failed",
+                "error": error_msg,
+                "youtube_url": youtube_url
+            }
+
+            raise HTTPException(
+                status_code=500,
+                detail=f"Conversion failed: {error_msg}"
+            )
+
+    except HTTPException:
+        # Re-raise HTTP exceptions
+        raise
     except Exception as e:
-        # Handle any errors in demo mode
+        # Catch-all for unexpected errors
         error_msg = str(e)
-        print(f"❌ Error in demo mode: {error_msg}")
-
-        jobs[job_id] = {
-            "status": "failed",
-            "error": error_msg,
-            "youtube_url": youtube_url
-        }
+        print(f"❌ Unexpected error: {error_msg}")
 
         raise HTTPException(
             status_code=500,
-            detail=f"Error: {error_msg}"
+            detail=f"Unexpected error: {error_msg}"
         )
 
 @app.get("/status/{job_id}")
