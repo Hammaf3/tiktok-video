@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube to TikTok Converter</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 48px;
+            max-width: 650px;
+            width: 100%;
+            animation: slideUp 0.5s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .logo {
+            font-size: 64px;
+            margin-bottom: 16px;
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        h1 {
+            color: #1a1a1a;
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 16px;
+            font-weight: 400;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        label {
+            display: block;
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 16px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            outline: none;
+            font-family: inherit;
+        }
+
+        input[type="text"]:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+        }
+
+        input[type="text"]::placeholder {
+            color: #999;
+        }
+
+        button {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            outline: none;
+            font-family: inherit;
+        }
+
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 30px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .status-box {
+            margin-top: 24px;
+            padding: 20px;
+            border-radius: 12px;
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .status-box.info {
+            background: #e3f2fd;
+            border: 2px solid #2196f3;
+            color: #1565c0;
+        }
+
+        .status-box.success {
+            background: #e8f5e9;
+            border: 2px solid #4caf50;
+            color: #2e7d32;
+        }
+
+        .status-box.error {
+            background: #ffebee;
+            border: 2px solid #f44336;
+            color: #c62828;
+        }
+
+        .status-text {
+            font-weight: 600;
+            margin-bottom: 12px;
+            font-size: 15px;
+        }
+
+        .progress-container {
+            margin-top: 12px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(0,0,0,0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 4px;
+        }
+
+        .progress-text {
+            font-size: 13px;
+            margin-top: 6px;
+            opacity: 0.8;
+        }
+
+        .download-btn {
+            display: inline-block;
+            margin-top: 16px;
+            padding: 14px 28px;
+            background: #4caf50;
+            color: white;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: 700;
+            transition: all 0.3s ease;
+            font-size: 15px;
+        }
+
+        .download-btn:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(76, 175, 80, 0.3);
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 32px;
+            padding-top: 24px;
+            border-top: 1px solid #e0e0e0;
+            color: #999;
+            font-size: 13px;
+        }
+
+        .footer a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 640px) {
+            .container {
+                padding: 32px 24px;
+            }
+
+            h1 {
+                font-size: 26px;
+            }
+
+            .logo {
+                font-size: 48px;
+            }
+
+            button {
+                padding: 16px;
+                font-size: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">🎬</div>
+            <h1>YouTube to TikTok Converter</h1>
+            <p class="subtitle">Convert YouTube videos to TikTok format instantly</p>
+        </div>
+
+        <form id="convertForm" onsubmit="handleConvert(event)">
+            <div class="form-group">
+                <label for="youtubeUrl">YouTube Video URL</label>
+                <input
+                    type="text"
+                    id="youtubeUrl"
+                    name="youtubeUrl"
+                    placeholder="Paste YouTube URL here (e.g., https://youtube.com/watch?v=...)"
+                    required
+                    autocomplete="off"
+                />
+            </div>
+
+            <button type="submit" id="submitBtn">
+                <span id="btnText">🚀 Convert to TikTok</span>
+            </button>
+        </form>
+
+        <div id="statusBox" class="status-box">
+            <div class="status-text" id="statusText"></div>
+            <div class="progress-container">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-text" id="progressText"></div>
+            </div>
+        </div>
+
+        <div class="footer">
+            Powered by <a href="https://huggingface.co/spaces/Hammaf3213/youtube" target="_blank">Hugging Face Spaces</a>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin;
+        let pollInterval = null;
+
+        async function handleConvert(event) {
+            event.preventDefault();
+
+            const url = document.getElementById('youtubeUrl').value.trim();
+            const submitBtn = document.getElementById('submitBtn');
+            const btnText = document.getElementById('btnText');
+            const statusBox = document.getElementById('statusBox');
+
+            // Reset previous status
+            hideStatus();
+            clearInterval(pollInterval);
+
+            // Validate URL
+            if (!url) {
+                showStatus('error', '❌ Please enter a YouTube URL');
+                return;
+            }
+
+            if (!url.includes('youtube.com') && !url.includes('youtu.be')) {
+                showStatus('error', '❌ Please enter a valid YouTube URL');
+                return;
+            }
+
+            // Disable button and show loading
+            submitBtn.disabled = true;
+            btnText.innerHTML = '<span class="spinner"></span>Converting...';
+
+            // Show initial status
+            showStatus('info', '🔄 Starting conversion...', 5);
+
+            try {
+                // Call convert API
+                const response = await fetch(`${API_BASE}/convert`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ youtube_url: url })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    if (data.job_id) {
+                        // Poll for job status
+                        await pollJobStatus(data.job_id);
+                    } else if (data.download_url) {
+                        // Direct download
+                        showSuccess(data.download_url);
+                    } else {
+                        showStatus('success', '✅ Conversion completed!', 100);
+                    }
+                } else {
+                    const errorMsg = data.detail || data.error || 'Conversion failed';
+                    showStatus('error', `❌ ${errorMsg}`);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showStatus('error', '❌ Network error. Please check your connection and try again.');
+            } finally {
+                // Re-enable button
+                submitBtn.disabled = false;
+                btnText.textContent = '🚀 Convert to TikTok';
+            }
+        }
+
+        async function pollJobStatus(jobId) {
+            let progress = 10;
+            let attempts = 0;
+            const maxAttempts = 60; // 3 minutes max
+
+            showStatus('info', '⏳ Processing video...', progress);
+
+            pollInterval = setInterval(async () => {
+                attempts++;
+
+                if (attempts > maxAttempts) {
+                    clearInterval(pollInterval);
+                    showStatus('error', '❌ Processing timeout. Please try again with a shorter video.');
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`${API_BASE}/status/${jobId}`);
+                    const data = await response.json();
+
+                    if (data.status === 'completed') {
+                        clearInterval(pollInterval);
+                        showSuccess(data.download_url || data.video_url);
+                    } else if (data.status === 'error' || data.status === 'failed') {
+                        clearInterval(pollInterval);
+                        const errorMsg = data.message || 'Conversion failed';
+                        showStatus('error', `❌ ${errorMsg}`);
+                    } else if (data.status === 'processing') {
+                        progress = Math.min(progress + 5, 90);
+                        const message = data.message || 'Processing video...';
+                        updateProgress(message, progress);
+                    }
+                } catch (error) {
+                    console.error('Poll error:', error);
+                    // Continue polling, don't stop on network hiccup
+                }
+            }, 3000); // Poll every 3 seconds
+        }
+
+        function showStatus(type, message, progress = 0) {
+            const statusBox = document.getElementById('statusBox');
+            const statusText = document.getElementById('statusText');
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+
+            statusBox.className = `status-box ${type}`;
+            statusBox.style.display = 'block';
+            statusText.innerHTML = message;
+            progressFill.style.width = progress + '%';
+            progressText.textContent = progress > 0 ? `${progress}%` : '';
+        }
+
+        function updateProgress(message, progress) {
+            const statusText = document.getElementById('statusText');
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+
+            statusText.textContent = message;
+            progressFill.style.width = progress + '%';
+            progressText.textContent = `${progress}%`;
+        }
+
+        function showSuccess(downloadUrl) {
+            const statusBox = document.getElementById('statusBox');
+            const statusText = document.getElementById('statusText');
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+
+            statusBox.className = 'status-box success';
+            statusBox.style.display = 'block';
+
+            if (downloadUrl) {
+                statusText.innerHTML = `
+                    ✅ Video converted successfully!<br>
+                    <a href="${downloadUrl}" class="download-btn" download>📥 Download Video</a>
+                `;
+            } else {
+                statusText.innerHTML = '✅ Video converted successfully!';
+            }
+
+            progressFill.style.width = '100%';
+            progressText.textContent = '100%';
+        }
+
+        function hideStatus() {
+            const statusBox = document.getElementById('statusBox');
+            statusBox.style.display = 'none';
+        }
+
+        // Auto-focus on input
+        window.addEventListener('load', () => {
+            document.getElementById('youtubeUrl').focus();
+        });
+    </script>
+</body>
+</html>

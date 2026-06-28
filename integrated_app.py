@@ -1440,8 +1440,18 @@ except Exception as e:
 
 if __name__ == '__main__':
     try:
-        # Get port from environment
-        port = int(os.getenv('PORT', 5000))
+        # Get port from environment with proper empty string handling
+        port_env = os.getenv('PORT', '').strip()
+        if not port_env:
+            port = 7860  # Hugging Face Spaces default
+            print(f"⚠️  PORT environment variable is empty or not set, using fallback: {port}")
+        else:
+            try:
+                port = int(port_env)
+                print(f"✅ Using PORT from environment: {port}")
+            except ValueError:
+                port = 7860
+                print(f"⚠️  Invalid PORT value '{port_env}', using fallback: {port}")
 
         print("=" * 60)
         print("🚀 Integrated YouTube Analyzer + Converter + TikTok Upload")
